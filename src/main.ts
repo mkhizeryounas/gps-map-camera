@@ -6,6 +6,7 @@ import { distance, GeoTracker } from './geo'
 import { renderMap, type MapImage } from './map'
 import { haptic, installButtonHaptics } from './haptics'
 import { paintStorefront } from './demo'
+import { getRotation, onRotation, startOrientation } from './orientation'
 import { playShutter, unlockAudio } from './sound'
 import { drawStamp } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
@@ -199,7 +200,35 @@ function drawOverlay() {
   if (!size) return
   const ctx = els.overlay.getContext('2d')!
   ctx.clearRect(0, 0, size.pw, size.ph)
-  drawStamp(ctx, size.pw, size.ph, stampData(), state.map, icon())
+  // Draw the stamp in the photo's upright frame, then turn it to match how the phone is held.
+  const rot = getRotation()
+  const swap = rot % 180 !== 0
+  const W = swap ? size.ph : size.pw
+  const H = swap ? size.pw : size.ph
+  ctx.save()
+  ctx.translate(size.pw / 2, size.ph / 2)
+  ctx.rotate((rot * Math.PI) / 180)
+  ctx.translate(-W / 2, -H / 2)
+  drawStamp(ctx, W, H, stampData(), state.map, icon())
+  ctx.restore()
+}
+
+// Keep camera controls upright as the phone turns (like the native camera app).
+let iconAngle = 0
+function applyRotation(rot: number) {
+  const target = rot > 180 ? rot - 360 : rot
+  const delta = ((target - iconAngle + 540) % 360) - 180
+  iconAngle += delta
+  els.camera.style.setProperty('--rot', `${iconAngle}deg`)
+  scheduleDraw()
+}
+onRotation(applyRotation)
+
+/** Ask for motion access (iOS) inside a user gesture, then track compass + orientation. */
+function startSensors() {
+  if (state.compassAsked) return
+  state.compassAsked = true
+  geo.startCompass().then((ok) => ok && startOrientation())
 }
 
 let rafPending = false
@@ -265,10 +294,8 @@ const toBlob = (c: HTMLCanvasElement, q: number) =>
 
 async function capture() {
   if (state.capturing) return
-  if (!state.compassAsked) {
-    state.compassAsked = true
-    geo.startCompass()
-  }
+  startSensors()
+  const rot = getRotation() // orientation at the moment of the tap
   const v = els.video
   if (!v.videoWidth) return toast('Camera not ready')
   const fix = geo.fix
@@ -287,13 +314,21 @@ async function capture() {
   if (flashed) await new Promise((r) => setTimeout(r, 450))
 
   try {
-    const W = v.videoWidth
-    const H = v.videoHeight
+    // Rotate the frame so the saved photo is upright however the phone was held.
+    const vw = v.videoWidth
+    const vh = v.videoHeight
+    const swap = rot % 180 !== 0
+    const W = swap ? vh : vw
+    const H = swap ? vw : vh
     const canvas = document.createElement('canvas')
     canvas.width = W
     canvas.height = H
     const ctx = canvas.getContext('2d')!
-    ctx.drawImage(v, 0, 0, W, H)
+    ctx.save()
+    ctx.translate(W / 2, H / 2)
+    ctx.rotate((-rot * Math.PI) / 180)
+    ctx.drawImage(v, -vw / 2, -vh / 2, vw, vh)
+    ctx.restore()
     if (flashed) setTorch(false)
 
     const date = new Date()
@@ -715,14 +750,17 @@ async function launch() {
   } catch {
     /* ignore */
   }
+  // Motion sensors: Android needs no permission; iOS must ask inside a tap, so use the first one.
+  const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: unknown } | undefined
+  if (DOE && !DOE.requestPermission) startSensors()
+  else document.addEventListener('click', startSensors, { once: true, capture: true })
   geo.start()
   await startCamera()
 }
 
 els.start.onclick = () => {
   unlockAudio()
-  state.compassAsked = true
-  geo.startCompass()
+  startSensors()
   launch()
 }
 // The tap lands on the label, which toggles the hidden switch: one 'change' per tap.

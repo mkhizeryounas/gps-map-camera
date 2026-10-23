@@ -75,7 +75,11 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 @media (min-height: 760px) { .welcome-card { gap: 20px; padding-top: 8px; } }
 
 /* ---------- camera ---------- */
-.camera { background: #000; touch-action: manipulation; }
+.camera { background: #000; touch-action: manipulation; --rot: 0deg; }
+/* Controls turn to stay upright when the phone is held sideways. */
+.camera .topbar .icon-btn svg, .camera .flash-btn svg, .camera .thumb, .camera .export-btn {
+  transform: rotate(var(--rot)); transition: transform .35s cubic-bezier(.2,.9,.3,1);
+}
 .topbar {
   flex: none; display: grid; grid-template-columns: 40px 1fr 40px; justify-items: center; align-items: center;
   padding: calc(8px + var(--safe-t)) 14px 8px; background: #000;
