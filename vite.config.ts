@@ -1,8 +1,24 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Shown in Settings so it's obvious which build a phone is running (Netlify provides COMMIT_REF).
+function appVersion() {
+  let commit = process.env.COMMIT_REF?.slice(0, 7)
+  if (!commit) {
+    try {
+      commit = execSync('git rev-parse --short HEAD').toString().trim()
+    } catch {
+      commit = 'dev'
+    }
+  }
+  const built = new Date().toISOString().slice(0, 16).replace('T', ' ')
+  return `${commit} · built ${built} UTC`
+}
+
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   // HTTPS is required for camera + GPS access when testing on a phone over LAN.
   plugins: [
     basicSsl(),

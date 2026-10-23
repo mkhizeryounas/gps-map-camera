@@ -57,6 +57,7 @@ const els = {
   settings: $('settings'),
   sheetBackdrop: $('sheetBackdrop'),
   settingsForm: $<HTMLFormElement>('settingsForm'),
+  appVersion: $('appVersion'),
   toast: $('toast'),
   snack: $('snack'),
   snackText: $('snackText'),
@@ -771,7 +772,11 @@ async function deleteCurrent() {
 
 // ---------------------------------------------------------------------------
 // Settings
+let swReg: ServiceWorkerRegistration | undefined
+
 function openSettings() {
+  els.appVersion.textContent = `Version ${__APP_VERSION__}`
+  swReg?.update().catch(() => {}) // a good moment to look for a newer build
   const f = els.settingsForm
   const s = state.settings
   ;(f.elements.namedItem('businessName') as HTMLInputElement).value = s.businessName
@@ -1015,6 +1020,7 @@ const updateSW = registerSW({
   },
   onRegisteredSW(_url, reg) {
     if (!reg) return
+    swReg = reg
     const check = () => {
       if (navigator.onLine) reg.update().catch(() => {})
     }
