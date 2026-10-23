@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500;1,600&display=swap" rel="stylesheet" />
     <title>GPS Map Camera</title>
   </head>
   <body>
@@ -56,7 +56,8 @@
 
       <footer class="controls">
         <button class="thumb" id="thumbBtn" aria-label="Open photos"><img id="thumbImg" alt="" hidden /><b id="countBadge" hidden></b></button>
-        <button class="shutter" id="shutter" aria-label="Take photo" data-haptic="heavy"><span></span></button>
+        <!-- A real <input switch> under the shutter: tapping it toggles natively, which is what plays the iOS haptic. -->
+          <label class="shutter" id="shutter" aria-label="Take photo"><input type="checkbox" switch class="haptic-switch" id="shutterSwitch" /><span></span></label>
         <button class="export-btn" id="exportBtn" aria-label="Export all photos">
           <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
           <span>Export</span>

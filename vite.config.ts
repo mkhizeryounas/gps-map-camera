@@ -30,6 +30,16 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         runtimeCaching: [
           {
+            // Sign typeface for the landing sample, so it renders offline too.
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             // Map tiles: cache so the stamp map still renders with patchy signal.
             urlPattern: /^https:\/\/(server\.arcgisonline\.com|[abcd]\.basemaps\.cartocdn\.com)\/.*/,
             handler: 'CacheFirst',

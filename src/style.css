@@ -116,6 +116,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .controls > :first-child { justify-self: start; }
 .controls > :last-child { justify-self: end; }
 .shutter { width: 78px; height: 78px; border-radius: 50%; border: 4px solid #fff; padding: 4px; display: grid; }
+.haptic-switch { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; margin: 0; }
+.shutter { position: relative; cursor: pointer; }
 .shutter span { border-radius: 50%; background: #fff; transition: transform .1s, background .2s; }
 .shutter:active span { transform: scale(.86); }
 .shutter.wait span { background: rgba(255,255,255,.4); }

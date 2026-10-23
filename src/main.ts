@@ -26,7 +26,8 @@ const els = {
   flash: $('flash'),
   gpsPill: $('gpsPill'),
   flashBtn: $<HTMLButtonElement>('flashBtn'),
-  shutter: $<HTMLButtonElement>('shutter'),
+  shutter: $<HTMLLabelElement>('shutter'),
+  shutterSwitch: $<HTMLInputElement>('shutterSwitch'),
   thumbBtn: $<HTMLButtonElement>('thumbBtn'),
   thumbImg: $<HTMLImageElement>('thumbImg'),
   countBadge: $('countBadge'),
@@ -696,7 +697,11 @@ async function startDemo() {
   }
   draw()
   demoTimer = window.setInterval(draw, 1000)
-  document.fonts?.load(`700 40px "Playfair Display"`).then(draw, () => {})
+  // Redraw once the sign's typeface has arrived (first run may be before it loads).
+  Promise.all([
+    document.fonts?.load(`600 40px "Cormorant Garamond"`),
+    document.fonts?.load(`italic 500 40px "Cormorant Garamond"`),
+  ]).then(draw, () => {})
 }
 
 // ---------------------------------------------------------------------------
@@ -720,7 +725,11 @@ els.start.onclick = () => {
   geo.startCompass()
   launch()
 }
-els.shutter.onclick = capture
+// The tap lands on the label, which toggles the hidden switch: one 'change' per tap.
+els.shutterSwitch.addEventListener('change', () => {
+  if (typeof navigator.vibrate === 'function') haptic('heavy') // Android; iOS ticks natively
+  capture()
+})
 // Warm up audio as the finger lands so the shutter sound has no start-up lag.
 els.shutter.addEventListener('pointerdown', unlockAudio)
 els.flashBtn.onclick = toggleFlash

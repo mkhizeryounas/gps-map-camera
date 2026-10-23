@@ -3,7 +3,7 @@
  * Everything is drawn procedurally in proportions of the canvas, so it fits any screen.
  */
 
-const SERIF = `"Playfair Display", Georgia, "Times New Roman", serif`
+const SERIF = `"Cormorant Garamond", "Cormorant", Georgia, "Times New Roman", serif`
 const SANS = `-apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif`
 const BRASS = '#d4af6a'
 
@@ -112,22 +112,50 @@ function sign(ctx: Ctx, W: number, H: number, x: number, y: number, w: number, h
   ctx.fillStyle = BRASS
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.font = `700 ${r * 0.85}px ${SERIF}`
-  ctx.fillText('JY', mx, my + r * 0.04)
+  ctx.font = `italic 600 ${r * 1.0}px ${SERIF}`
+  ctx.fillText('JY', mx - r * 0.03, my + r * 0.04)
 
-  // wordmark with warm backlit glow
+  // wordmark: tracked uppercase serif with an italic ampersand, warmly backlit
   const left = mx + r + w * 0.04
   const right = x + w * 0.96
   const cx = (left + right) / 2
-  const size = fitFont(ctx, 'JY & Sons', '700', SERIF, h * 0.5, right - left)
-  ctx.shadowColor = 'rgba(255,196,120,0.85)'
-  ctx.shadowBlur = size * 0.45
-  const g = ctx.createLinearGradient(0, my - size / 2, 0, my + size / 2)
-  g.addColorStop(0, '#fffaf0')
-  g.addColorStop(1, '#ffd89a')
-  ctx.fillStyle = g
-  ctx.fillText('JY & Sons', cx, my - h * 0.07)
+  const parts = [
+    { text: 'JY', font: (z: number) => `600 ${z}px ${SERIF}`, track: 0.12, color: 'word' },
+    { text: '&', font: (z: number) => `italic 500 ${z * 1.12}px ${SERIF}`, track: 0, color: 'brass' },
+    { text: 'SONS', font: (z: number) => `600 ${z}px ${SERIF}`, track: 0.12, color: 'word' },
+  ] as const
+  const measure = (z: number) =>
+    parts.map((p) => {
+      ctx.font = p.font(z)
+      ctx.letterSpacing = `${z * p.track}px`
+      // letterSpacing also pads the last glyph; trim it so the parts sit evenly.
+      return ctx.measureText(p.text).width - z * p.track
+    })
+  let size = h * 0.5
+  let widths = measure(size)
+  const total = (z: number, ws: number[]) => ws.reduce((a, b) => a + b, 0) + z * 0.32 * (parts.length - 1)
+  while (total(size, widths) > right - left && size > 4) {
+    size *= 0.95
+    widths = measure(size)
+  }
+  const wordFill = ctx.createLinearGradient(0, my - size / 2, 0, my + size / 2)
+  wordFill.addColorStop(0, '#fffaf0')
+  wordFill.addColorStop(1, '#f6dcae')
+  let px = cx - total(size, widths) / 2
+  const baseY = my - h * 0.07
+  ctx.textAlign = 'left'
+  parts.forEach((p, i) => {
+    ctx.font = p.font(size)
+    ctx.letterSpacing = `${size * p.track}px`
+    ctx.shadowColor = 'rgba(255,196,120,0.7)'
+    ctx.shadowBlur = size * 0.35
+    ctx.fillStyle = p.color === 'brass' ? '#e3bf78' : wordFill
+    ctx.fillText(p.text, px, baseY + (p.color === 'brass' ? size * 0.02 : 0))
+    px += widths[i] + size * 0.32
+  })
   ctx.shadowBlur = 0
+  ctx.letterSpacing = '0px'
+  ctx.textAlign = 'center'
 
   ctx.fillStyle = 'rgba(212,175,106,0.95)'
   const tag = 'FINE GOODS  ·  EST. 1998'

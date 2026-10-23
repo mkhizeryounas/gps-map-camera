@@ -12,16 +12,18 @@ const VIBRATE: Record<Haptic, number | number[]> = {
 // (Safari 18+) plays the system haptic tick. A fresh, hidden switch is clicked each time,
 // and it only fires inside a user gesture.
 function iosTick() {
+  // Kept rendered (nearly transparent, not display:none): iOS only plays the tick for a live control.
   const label = document.createElement('label')
   label.ariaHidden = 'true'
-  label.style.display = 'none'
+  label.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0.01;pointer-events:none;overflow:hidden'
   const input = document.createElement('input')
   input.type = 'checkbox'
   input.setAttribute('switch', '')
+  input.tabIndex = -1
   label.append(input)
-  document.head.append(label)
+  document.body.append(label)
   label.click()
-  label.remove()
+  setTimeout(() => label.remove(), 300)
 }
 
 export function haptic(kind: Haptic = 'light') {
