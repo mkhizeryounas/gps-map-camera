@@ -14,53 +14,22 @@
     <title>GPS Map Camera</title>
   </head>
   <body>
-    <!-- Welcome -------------------------------------------------------------->
+    <!-- Welcome: one screen, no scroll ----------------------------------------->
     <section id="welcome" class="screen welcome">
-      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="welcome-inner">
-        <div class="brand">
-          <img src="/pwa-192x192.png" alt="" />
-          <span>GPS Map Camera</span>
-          <em class="tag">FBR · IRIS</em>
-        </div>
-
-        <h1>Geo-tagged photos,<br /><span class="grad">accepted first time.</span></h1>
-        <p class="lede">Stamp every shot with a satellite map, address, coordinates and time — in the exact format FBR approves for sales tax registration.</p>
-
-        <figure class="demo">
-          <canvas id="demo" width="960" height="1080" aria-label="Example stamped photo"></canvas>
-          <figcaption><span class="live-dot"></span>Sample stamp</figcaption>
-        </figure>
-
-        <ul class="req">
-          <li>
-            <span class="ico g"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>
-            <div><b>Business premises</b><small>Exterior with signboard &amp; interior</small></div>
-          </li>
-          <li>
-            <span class="ico b"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.2 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></span>
-            <div><b>Machinery</b><small>Required for manufacturers</small></div>
-          </li>
-          <li>
-            <span class="ico y"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span>
-            <div><b>Electricity &amp; gas meters</b><small>Industrial meters, reference no. visible</small></div>
-          </li>
+      <div class="hero">
+        <canvas id="demo" width="960" height="1280" aria-label="Example stamped photo"></canvas>
+        <span class="hero-tag"><i></i>Sample photo</span>
+      </div>
+      <div class="welcome-card">
+        <div class="brand"><img src="/pwa-192x192.png" alt="" /><div><h1>GPS Map Camera</h1><p>Geo-tagged photos for FBR registration</p></div></div>
+        <ul class="points">
+          <li><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Map, address &amp; coordinates on every photo</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Same stamp format FBR has accepted</li>
+          <li><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Photos stay on your phone until you export</li>
         </ul>
-
-        <div class="cta">
-          <button id="start" class="btn primary big">
-            Open camera
-            <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
-          <button id="install" class="btn glass big" hidden>
-            <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-            Install app
-          </button>
-          <p class="ios-hint" id="iosHint" hidden>
-            Install: tap <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> Share → <b>Add to Home Screen</b>
-          </p>
-          <p class="fine">Photos stay on your device. Camera &amp; location access required.</p>
-        </div>
+        <button id="start" class="btn primary big">Start</button>
+        <button id="install" class="btn glass big" hidden>Install app</button>
+        <p class="ios-hint" id="iosHint" hidden>Install: tap <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> then <b>Add to Home Screen</b></p>
       </div>
     </section>
 
@@ -84,7 +53,7 @@
 
       <footer class="controls">
         <button class="thumb" id="thumbBtn" aria-label="Open photos"><img id="thumbImg" alt="" hidden /><b id="countBadge" hidden></b></button>
-        <button class="shutter" id="shutter" aria-label="Take photo"><span></span></button>
+        <button class="shutter" id="shutter" aria-label="Take photo" data-haptic="heavy"><span></span></button>
         <button class="export-btn" id="exportBtn" aria-label="Export all photos">
           <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
           <span>Export</span>
@@ -96,34 +65,46 @@
     <section id="gallery" class="screen panel" hidden>
       <header class="panel-head">
         <button class="icon-btn" data-close aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-        <h2>Photos</h2>
-        <span></span>
+        <h2 id="galleryTitle">Photos</h2>
+        <button class="text-btn" id="selectBtn">Select</button>
       </header>
       <div class="panel-body">
         <div class="grid" id="grid"></div>
-        <p class="empty" id="empty">No photos yet.</p>
+        <div class="empty" id="empty" hidden>
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+          <b>No photos</b>
+          <span>Photos you take appear here.</span>
+          <button class="btn glass" data-close>Open camera</button>
+        </div>
       </div>
-      <div class="panel-foot" id="galleryFoot">
-        <button class="btn primary big" id="shareAll">
-          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
-          <span id="shareAllLabel">Export all</span>
-        </button>
-      </div>
+      <footer class="panel-foot" id="galleryFoot">
+        <div class="foot-normal">
+          <button class="btn primary big" id="exportAll"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span id="exportAllLabel">Export all</span></button>
+        </div>
+        <div class="foot-select">
+          <button class="text-btn" id="selectAllBtn">Select all</button>
+          <span id="selCount">Select photos</span>
+          <div class="foot-actions">
+            <button class="btn danger-soft" id="deleteSel" disabled data-haptic="medium"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></svg>Delete</button>
+            <button class="btn primary" id="exportSel" disabled><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Export</button>
+          </div>
+        </div>
+      </footer>
     </section>
 
-    <!-- Viewer --------------------------------------------------------------->
+    <!-- Viewer: swipe between photos ---------------------------------------->
     <section id="viewer" class="screen viewer" hidden>
       <header class="panel-head overlay-head">
         <button class="icon-btn" data-close aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-        <h2 id="viewerTitle"></h2>
+        <h2><span id="viewerTitle"></span><small id="viewerPos"></small></h2>
         <span></span>
       </header>
-      <div class="viewer-img"><img id="viewerImg" alt="" /></div>
-      <div class="viewer-actions">
-        <button class="act danger" id="vDelete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></svg>Delete</button>
-        <button class="btn primary act-main" id="vShare"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Export</button>
-        <button class="act" id="vMaps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Map</button>
-      </div>
+      <div class="track" id="track"></div>
+      <footer class="viewer-actions">
+        <button class="round-act" id="vDelete" aria-label="Delete" data-haptic="medium"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></svg></button>
+        <button class="btn primary big" id="vShare"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Export</button>
+        <button class="round-act" id="vMaps" aria-label="Open in Maps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></button>
+      </footer>
     </section>
 
     <!-- Settings sheet ------------------------------------------------------->
@@ -145,7 +126,17 @@
       </form>
     </section>
 
+    <!-- Action sheet ---------------------------------------------------------->
+    <div class="sheet-backdrop" id="askBackdrop" hidden></div>
+    <section class="sheet ask" id="ask" hidden role="dialog" aria-modal="true">
+      <div class="grabber"></div>
+      <h2 id="askTitle"></h2>
+      <p id="askText"></p>
+      <div class="ask-actions" id="askActions"></div>
+    </section>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="snack" id="snack" role="status" aria-live="polite"><span id="snackText"></span><button id="snackUndo">Undo</button></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

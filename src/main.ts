@@ -4,6 +4,7 @@ import { buildExif, withExif } from './exif'
 import { fileStamp, shortDate } from './format'
 import { distance, GeoTracker } from './geo'
 import { renderMap, type MapImage } from './map'
+import { haptic, installButtonHaptics } from './haptics'
 import { drawStamp } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
 import type { PhotoRecord, Settings, StampData } from './types'
@@ -32,14 +33,21 @@ const els = {
   exportBtn: $<HTMLButtonElement>('exportBtn'),
   settingsBtn: $<HTMLButtonElement>('settingsBtn'),
   gallery: $('gallery'),
+  galleryTitle: $('galleryTitle'),
+  selectBtn: $<HTMLButtonElement>('selectBtn'),
   grid: $('grid'),
   empty: $('empty'),
   galleryFoot: $('galleryFoot'),
-  shareAll: $<HTMLButtonElement>('shareAll'),
-  shareAllLabel: $('shareAllLabel'),
+  exportAll: $<HTMLButtonElement>('exportAll'),
+  exportAllLabel: $('exportAllLabel'),
+  selectAllBtn: $<HTMLButtonElement>('selectAllBtn'),
+  selCount: $('selCount'),
+  deleteSel: $<HTMLButtonElement>('deleteSel'),
+  exportSel: $<HTMLButtonElement>('exportSel'),
   viewer: $('viewer'),
   viewerTitle: $('viewerTitle'),
-  viewerImg: $<HTMLImageElement>('viewerImg'),
+  viewerPos: $('viewerPos'),
+  track: $('track'),
   vShare: $<HTMLButtonElement>('vShare'),
   vMaps: $<HTMLButtonElement>('vMaps'),
   vDelete: $<HTMLButtonElement>('vDelete'),
@@ -47,6 +55,14 @@ const els = {
   sheetBackdrop: $('sheetBackdrop'),
   settingsForm: $<HTMLFormElement>('settingsForm'),
   toast: $('toast'),
+  snack: $('snack'),
+  snackText: $('snackText'),
+  snackUndo: $<HTMLButtonElement>('snackUndo'),
+  ask: $('ask'),
+  askBackdrop: $('askBackdrop'),
+  askTitle: $('askTitle'),
+  askText: $('askText'),
+  askActions: $('askActions'),
 }
 
 const state = {
@@ -56,8 +72,11 @@ const state = {
   mapAt: null as { lat: number; lon: number; style: string } | null,
   mapBusy: false,
   photos: [] as PhotoRecord[],
-  urls: [] as string[],
-  current: null as PhotoRecord | null,
+  urls: new Map<string, string>(), // photo id → object URL (full image)
+  thumbs: new Map<string, string>(), // photo id → object URL (thumbnail)
+  selecting: false,
+  selected: new Set<string>(),
+  viewIndex: 0,
   capturing: false,
   compassAsked: false,
   flash: readFlashPref(),
@@ -79,7 +98,7 @@ badgeIcon.src = '/pwa-192x192.png'
 badgeIcon.onload = () => scheduleDraw()
 const icon = () => (badgeIcon.complete && badgeIcon.naturalWidth ? badgeIcon : null)
 
-const haptic = (ms = 8) => navigator.vibrate?.(ms)
+installButtonHaptics()
 
 // ---------------------------------------------------------------------------
 // Toast
@@ -138,7 +157,6 @@ function toggleFlash() {
     /* ignore */
   }
   renderFlash()
-  haptic()
   toast(state.flash ? 'Flash on' : 'Flash off', 1000)
 }
 
@@ -256,7 +274,6 @@ async function capture() {
   if (!fix) return toast('Waiting for GPS — step outside or near a window')
 
   state.capturing = true
-  haptic(15)
   els.shutter.classList.add('busy')
   els.flash.classList.remove('go')
   void els.flash.offsetWidth
@@ -311,6 +328,7 @@ async function capture() {
     await savePhoto(rec)
     state.photos.unshift(rec)
     updateThumb(true)
+    haptic('success')
     if (fix.accuracy > 50) toast(`Saved — low GPS accuracy (±${Math.round(fix.accuracy)} m)`)
   } catch (e) {
     console.error(e)
@@ -319,6 +337,100 @@ async function capture() {
     if (flashed) setTorch(false)
     state.capturing = false
     els.shutter.classList.remove('busy')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Action sheet: resolves with the chosen action id, or null when dismissed.
+interface AskAction {
+  id: string
+  label: string
+  style: 'primary' | 'danger' | 'glass'
+}
+
+function ask(title: string, text: string, actions: AskAction[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    els.askTitle.textContent = title
+    els.askText.textContent = text
+    els.askActions.innerHTML = ''
+    const done = (v: string | null) => {
+      els.ask.hidden = true
+      els.askBackdrop.hidden = true
+      resolve(v)
+    }
+    for (const a of actions) {
+      const b = document.createElement('button')
+      b.className = `btn ${a.style}`
+      if (a.style === 'danger') b.dataset.haptic = 'warning'
+      b.textContent = a.label
+      b.onclick = () => done(a.id)
+      els.askActions.append(b)
+    }
+    els.askBackdrop.onclick = () => done(null)
+    els.ask.hidden = false
+    els.askBackdrop.hidden = false
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Delete with undo: photos disappear immediately; the IndexedDB delete is committed
+// after the undo window closes (or right away if the app is backgrounded).
+let pending: { photos: PhotoRecord[]; timer: number } | null = null
+
+function commitPending() {
+  if (!pending) return
+  clearTimeout(pending.timer)
+  pending.photos.forEach((p) => {
+    deletePhoto(p.id)
+    releaseUrls(p.id)
+  })
+  pending = null
+  els.snack.classList.remove('show')
+}
+
+function removePhotos(ids: Set<string>) {
+  commitPending()
+  const removed = state.photos.filter((p) => ids.has(p.id))
+  if (!removed.length) return
+  state.photos = state.photos.filter((p) => !ids.has(p.id))
+  ids.forEach((id) => state.selected.delete(id))
+  pending = { photos: removed, timer: window.setTimeout(commitPending, 5000) }
+  els.snackText.textContent = removed.length === 1 ? 'Photo deleted' : `${removed.length} photos deleted`
+  refreshAll()
+  placeSnack()
+  els.snack.classList.add('show')
+}
+
+/** Float the undo bar just above whichever bottom bar is on screen. */
+function placeSnack() {
+  const bar = !els.viewer.hidden
+    ? els.viewer.querySelector('.viewer-actions')
+    : !els.gallery.hidden
+      ? els.galleryFoot.hidden
+        ? null
+        : els.galleryFoot
+      : els.camera.hidden
+        ? null
+        : els.camera.querySelector('.controls')
+  const h = bar instanceof HTMLElement ? bar.offsetHeight : 0
+  els.snack.style.bottom = h ? `${h + 12}px` : 'calc(16px + env(safe-area-inset-bottom, 0px))'
+}
+
+function undoDelete() {
+  if (!pending) return
+  clearTimeout(pending.timer)
+  state.photos = [...state.photos, ...pending.photos].sort((a, b) => b.createdAt - a.createdAt)
+  pending = null
+  els.snack.classList.remove('show')
+  refreshAll()
+}
+
+function refreshAll() {
+  updateThumb()
+  if (!els.gallery.hidden) renderGallery()
+  if (!els.viewer.hidden) {
+    if (!state.photos.length) history.back()
+    else renderViewer(Math.min(state.viewIndex, state.photos.length - 1))
   }
 }
 
@@ -336,32 +448,59 @@ function download(p: PhotoRecord) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000)
 }
 
-/** Native share sheet (Save to Photos / Files / AirDrop / email) with a download fallback. */
+/** Native share sheet (Save to Photos / Files / AirDrop / email), with a download fallback.
+ *  Afterwards, offers to clear the exported photos out of the app. */
 async function exportPhotos(photos: PhotoRecord[]) {
-  if (!photos.length) return toast('No photos to export')
+  if (!photos.length) return
   const files = photos.map(fileOf)
   if (navigator.canShare?.({ files })) {
     try {
       await navigator.share({ files })
     } catch (e) {
       if ((e as DOMException).name !== 'AbortError') toast('Export failed')
+      return
     }
   } else {
     photos.forEach(download)
+  }
+  const n = photos.length
+  const choice = await ask(
+    n === 1 ? 'Photo exported' : `${n} photos exported`,
+    'Remove them from this app to free up space? Your exported copies are not affected.',
+    [
+      { id: 'remove', label: n === 1 ? 'Remove from app' : `Remove ${n} photos from app`, style: 'danger' },
+      { id: 'keep', label: 'Keep', style: 'glass' },
+    ],
+  )
+  if (choice === 'remove') {
+    setSelecting(false)
+    removePhotos(new Set(photos.map((p) => p.id)))
   }
 }
 
 // ---------------------------------------------------------------------------
 // Photos
-let thumbUrl = ''
+const thumbUrl = (p: PhotoRecord) => {
+  let u = state.thumbs.get(p.id)
+  if (!u) state.thumbs.set(p.id, (u = URL.createObjectURL(p.thumb)))
+  return u
+}
+const fullUrl = (p: PhotoRecord) => {
+  let u = state.urls.get(p.id)
+  if (!u) state.urls.set(p.id, (u = URL.createObjectURL(p.blob)))
+  return u
+}
+function releaseUrls(id: string) {
+  for (const m of [state.urls, state.thumbs]) {
+    const u = m.get(id)
+    if (u) URL.revokeObjectURL(u)
+    m.delete(id)
+  }
+}
+
 function updateThumb(pop = false) {
   const p = state.photos[0]
-  if (thumbUrl) URL.revokeObjectURL(thumbUrl)
-  thumbUrl = ''
-  if (p) {
-    thumbUrl = URL.createObjectURL(p.thumb)
-    els.thumbImg.src = thumbUrl
-  }
+  if (p) els.thumbImg.src = thumbUrl(p)
   const n = state.photos.length
   els.thumbImg.hidden = !p
   els.countBadge.hidden = !n
@@ -374,47 +513,116 @@ function updateThumb(pop = false) {
   }
 }
 
+const CHECK = '<span class="check"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>'
+
 function renderGallery() {
-  state.urls.forEach(URL.revokeObjectURL)
-  state.urls = []
+  const n = state.photos.length
+  if (!n && state.selecting) state.selecting = false
+  els.gallery.classList.toggle('selecting', state.selecting)
   els.grid.innerHTML = ''
   for (const p of state.photos) {
     const t = document.createElement('button')
     t.className = 'tile'
-    const img = document.createElement('img')
-    const url = URL.createObjectURL(p.thumb)
-    state.urls.push(url)
-    img.src = url
-    img.loading = 'lazy'
-    img.alt = ''
-    const label = document.createElement('span')
-    label.textContent = shortDate(p.createdAt)
-    t.append(img, label)
-    t.onclick = () => openViewer(p)
+    t.classList.toggle('sel', state.selected.has(p.id))
+    t.innerHTML = `<img alt="" loading="lazy" src="${thumbUrl(p)}">${CHECK}`
+    t.setAttribute('aria-label', shortDate(p.createdAt))
+    t.onclick = () => {
+      if (!state.selecting) return openViewer(state.photos.indexOf(p))
+      if (state.selected.has(p.id)) state.selected.delete(p.id)
+      else state.selected.add(p.id)
+      t.classList.toggle('sel', state.selected.has(p.id))
+      updateSelectionBar()
+    }
     els.grid.append(t)
   }
-  const n = state.photos.length
   els.empty.hidden = n > 0
   els.galleryFoot.hidden = n === 0
-  els.shareAllLabel.textContent = n === 1 ? 'Export photo' : `Export all ${n} photos`
+  els.selectBtn.hidden = n === 0
+  els.selectBtn.textContent = state.selecting ? 'Cancel' : 'Select'
+  els.exportAllLabel.textContent = n === 1 ? 'Export photo' : `Export all ${n} photos`
+  updateSelectionBar()
+}
+
+function updateSelectionBar() {
+  const k = state.selected.size
+  const n = state.photos.length
+  els.galleryTitle.textContent = state.selecting ? (k ? `${k} selected` : 'Select photos') : 'Photos'
+  els.selCount.textContent = ''
+  els.selectAllBtn.textContent = k === n && n > 0 ? 'Deselect all' : 'Select all'
+  els.deleteSel.disabled = !k
+  els.exportSel.disabled = !k
+}
+
+function setSelecting(on: boolean) {
+  state.selecting = on
+  state.selected.clear()
+  if (!els.gallery.hidden) renderGallery()
 }
 
 function openGallery() {
+  state.selecting = false
+  state.selected.clear()
   renderGallery()
   els.gallery.hidden = false
   history.pushState({ view: 'gallery' }, '')
 }
 
-let viewerUrl = ''
-function openViewer(p: PhotoRecord) {
-  state.current = p
-  if (viewerUrl) URL.revokeObjectURL(viewerUrl)
-  viewerUrl = URL.createObjectURL(p.blob)
-  els.viewerImg.src = viewerUrl
+// Viewer: one slide per photo, swiped with native scroll-snap.
+function renderViewer(index: number) {
+  els.track.innerHTML = ''
+  for (const p of state.photos) {
+    const slide = document.createElement('div')
+    slide.className = 'slide'
+    const img = document.createElement('img')
+    img.alt = ''
+    img.loading = 'lazy'
+    img.src = fullUrl(p)
+    slide.append(img)
+    els.track.append(slide)
+  }
+  state.viewIndex = index
+  requestAnimationFrame(() => {
+    els.track.scrollTo({ left: index * els.track.clientWidth, behavior: 'instant' as ScrollBehavior })
+    updateViewerTitle()
+  })
+}
+
+function updateViewerTitle() {
+  const w = els.track.clientWidth || 1
+  const i = Math.max(0, Math.min(state.photos.length - 1, Math.round(els.track.scrollLeft / w)))
+  if (i !== state.viewIndex && !els.viewer.hidden) haptic('light')
+  state.viewIndex = i
+  const p = state.photos[state.viewIndex]
+  if (!p) return
   els.viewerTitle.textContent = shortDate(p.createdAt)
-  delete els.vDelete.dataset.armed
+  els.viewerPos.textContent = state.photos.length > 1 ? `${state.viewIndex + 1} of ${state.photos.length}` : ''
+}
+
+function openViewer(index: number) {
   els.viewer.hidden = false
+  renderViewer(index)
   history.pushState({ view: 'viewer' }, '')
+}
+
+/** iOS-style confirmation before any delete. */
+async function confirmDelete(n: number) {
+  const choice = await ask(
+    n === 1 ? 'Delete this photo?' : `Delete ${n} photos?`,
+    n === 1 ? 'It will be removed from this app.' : 'They will be removed from this app.',
+    [
+      { id: 'delete', label: n === 1 ? 'Delete Photo' : `Delete ${n} Photos`, style: 'danger' },
+      { id: 'cancel', label: 'Cancel', style: 'glass' },
+    ],
+  )
+  return choice === 'delete'
+}
+
+async function deleteCurrent() {
+  const p = state.photos[state.viewIndex]
+  if (!p || !(await confirmDelete(1))) return
+  const slide = els.track.children[state.viewIndex] as HTMLElement | undefined
+  slide?.classList.add('leaving')
+  setTimeout(() => removePhotos(new Set([p.id])), 180)
 }
 
 // ---------------------------------------------------------------------------
@@ -488,6 +696,14 @@ async function startDemo() {
   const lon = 74.261938
   const map = await renderMap(lat, lon, 'satellite').catch(() => null)
   const draw = () => {
+    // Match the canvas to its on-screen box so the stamp is never cropped.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const w = Math.round(c.clientWidth * dpr)
+    const h = Math.round(c.clientHeight * dpr)
+    if (w && h && (c.width !== w || c.height !== h)) {
+      c.width = w
+      c.height = h
+    }
     paintStorefront(ctx, c.width, c.height)
     drawStamp(
       ctx,
@@ -539,35 +755,49 @@ els.settingsForm.onsubmit = (e) => {
   e.preventDefault()
   closeSettings()
 }
-els.shareAll.onclick = () => exportPhotos(state.photos)
-els.vShare.onclick = () => state.current && exportPhotos([state.current])
+const selectedPhotos = () => state.photos.filter((p) => state.selected.has(p.id))
+els.exportAll.onclick = () => exportPhotos(state.photos)
+els.selectBtn.onclick = () => setSelecting(!state.selecting)
+els.selectAllBtn.onclick = () => {
+  if (state.selected.size === state.photos.length) state.selected.clear()
+  else state.photos.forEach((p) => state.selected.add(p.id))
+  renderGallery()
+}
+els.deleteSel.onclick = async () => {
+  const ids = new Set(state.selected)
+  if (!ids.size || !(await confirmDelete(ids.size))) return
+  els.grid.querySelectorAll('.tile.sel').forEach((t) => t.classList.add('leaving'))
+  setTimeout(() => {
+    state.selecting = false
+    removePhotos(ids)
+  }, 200)
+}
+els.exportSel.onclick = () => exportPhotos(selectedPhotos())
+els.snackUndo.onclick = undoDelete
+els.track.addEventListener('scroll', () => requestAnimationFrame(updateViewerTitle), { passive: true })
+els.vShare.onclick = () => {
+  const p = state.photos[state.viewIndex]
+  if (p) exportPhotos([p])
+}
+els.vDelete.onclick = deleteCurrent
 els.vMaps.onclick = () => {
-  const p = state.current
+  const p = state.photos[state.viewIndex]
   if (p) window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`, '_blank')
 }
-els.vDelete.onclick = async () => {
-  const p = state.current
-  if (!p) return
-  if (els.vDelete.dataset.armed !== '1') {
-    els.vDelete.dataset.armed = '1'
-    toast('Tap Delete again to confirm')
-    setTimeout(() => delete els.vDelete.dataset.armed, 3000)
-    return
-  }
-  delete els.vDelete.dataset.armed
-  await deletePhoto(p.id)
-  state.photos = state.photos.filter((x) => x.id !== p.id)
-  updateThumb()
-  renderGallery()
-  history.back()
-}
-
 document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => history.back()))
 
 // Back button / gesture closes the top-most panel.
 window.addEventListener('popstate', () => {
-  if (!els.viewer.hidden) els.viewer.hidden = true
-  else if (!els.gallery.hidden) els.gallery.hidden = true
+  if (!els.ask.hidden) {
+    els.askBackdrop.click()
+  } else if (!els.viewer.hidden) {
+    els.viewer.hidden = true
+    els.track.innerHTML = ''
+    if (!els.gallery.hidden) renderGallery()
+  } else if (!els.gallery.hidden) {
+    els.gallery.hidden = true
+  }
+  if (els.snack.classList.contains('show')) placeSnack()
 })
 
 // Install: Android/desktop get the native prompt; iOS needs manual "Add to Home Screen".
@@ -590,7 +820,11 @@ els.video.addEventListener('loadedmetadata', scheduleDraw)
 window.addEventListener('resize', scheduleDraw)
 setInterval(scheduleDraw, 1000) // keep the clock on the preview ticking
 
+// Never lose a pending delete if the app is closed during the undo window.
+window.addEventListener('pagehide', commitPending)
+
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) commitPending()
   if (els.camera.hidden) return
   if (document.hidden) stopCamera()
   else startCamera()
