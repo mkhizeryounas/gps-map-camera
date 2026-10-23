@@ -215,6 +215,9 @@ function stampData(date = new Date()): StampData {
 
 // ---------------------------------------------------------------------------
 // Live preview: same renderer as the saved photo, positioned over the visible video frame.
+const landscapeRails = matchMedia('(orientation: landscape) and (max-height: 560px)')
+landscapeRails.addEventListener('change', () => scheduleDraw())
+
 function layoutOverlay() {
   const v = els.video
   const vw = v.videoWidth
@@ -227,7 +230,11 @@ function layoutOverlay() {
   const h = vh * scale
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const c = els.overlay
-  Object.assign(c.style, { left: `${(sw - w) / 2}px`, top: `${(sh - h) / 2}px`, width: `${w}px`, height: `${h}px` })
+  // Portrait: picture is pinned to the top of the stage (object-position); landscape: centred.
+  const top = landscapeRails.matches ? (sh - h) / 2 : 0
+  Object.assign(c.style, { left: `${(sw - w) / 2}px`, top: `${top}px`, width: `${w}px`, height: `${h}px` })
+  // Let the shutter row centre itself in the space below the picture.
+  els.camera.style.setProperty('--vb', `${els.stage.offsetTop + top + h}px`)
   const pw = Math.round(w * dpr)
   const ph = Math.round(h * dpr)
   if (c.width !== pw || c.height !== ph) {

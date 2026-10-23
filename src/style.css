@@ -16,7 +16,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
+html, body { margin: 0; height: 100%; background: #000; color: var(--text); overflow: hidden; }
 body {
   font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -267,6 +267,31 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- portrait camera: full-bleed viewfinder under a progressive blur ---------- */
+@media not all and (orientation: landscape) and (max-height: 560px) {
+  .camera { display: block; }
+  .camera .topbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 4; isolation: isolate;
+    background: transparent; padding: calc(8px + var(--safe-t)) 14px 10px;
+  }
+  /* Blur that fades out downwards; kept on a pseudo-element so the buttons aren't masked. */
+  .camera .topbar::before {
+    content: ""; position: absolute; inset: 0 0 -28px 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.2) 70%, transparent);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    mask-image: linear-gradient(#000 45%, transparent); -webkit-mask-image: linear-gradient(#000 45%, transparent);
+  }
+  /* Viewfinder starts right under the status bar; controls get at least 120px below it. */
+  .stage { position: absolute; top: var(--safe-t); left: 0; right: 0; bottom: calc(120px + var(--safe-b)); }
+  .stage video { object-position: center top; }
+  /* Controls sit centred between the bottom of the picture (--vb, set in JS) and the screen edge. */
+  .controls {
+    position: absolute; left: 0; right: 0; bottom: 0; top: var(--vb, auto);
+    min-height: calc(120px + var(--safe-b)); background: transparent;
+    padding: 12px 28px var(--safe-b); align-content: center;
+  }
+}
 
 /* ---------- landscape (iOS rotates the page even when installed) ---------- */
 @media (orientation: landscape) and (max-height: 560px) {
