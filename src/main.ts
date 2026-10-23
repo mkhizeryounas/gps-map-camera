@@ -932,12 +932,17 @@ els.vMaps.onclick = () => {
 document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => history.back()))
 
 /**
- * Hide the camera screen while Photos/viewer cover it. WebKit otherwise paints the
- * camera's status-bar backdrop blur on top of them (smearing the viewer's title).
- * The stream keeps running, so returning to the camera is instant.
+ * Take the camera screen out of the page while Photos/viewer cover it. WebKit otherwise
+ * paints the camera's status-bar backdrop blur on top of them (smearing the viewer's title).
+ * The stream itself keeps running.
  */
 function updateCovered() {
-  els.camera.classList.toggle('covered', !els.gallery.hidden || !els.viewer.hidden)
+  const covered = !els.gallery.hidden || !els.viewer.hidden
+  els.camera.classList.toggle('covered', covered)
+  if (!covered) {
+    els.video.play().catch(() => {}) // make sure the preview resumes after being display:none
+    scheduleDraw()
+  }
 }
 
 // Back button / gesture closes the top-most panel.
