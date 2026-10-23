@@ -257,6 +257,7 @@ onRotation(applyRotation)
  * Outside a tap it still succeeds when access was granted before.
  */
 let motionReady = false
+let rotateHintShown = false
 let motionAsking: Promise<boolean> | null = null
 function startSensors(): Promise<boolean> {
   if (motionReady) return Promise.resolve(true)
@@ -265,6 +266,10 @@ function startSensors(): Promise<boolean> {
     motionReady = ok
     if (ok) startOrientation()
     els.motionBtn.hidden = ok || els.camera.hidden
+    if (!els.motionBtn.hidden && !rotateHintShown) {
+      rotateHintShown = true
+      toast('Tap the rotate icon to turn on auto-rotate', 3500)
+    }
     return ok
   })
   return motionAsking
