@@ -275,6 +275,27 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- portrait camera: picture from the very top, blur only over the status bar ---------- */
+@media not all and (orientation: landscape) and (max-height: 560px) {
+  /* Progressive blur over the status-bar strip, fading into the picture. */
+  .camera::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; z-index: 3; pointer-events: none;
+    height: calc(var(--safe-t) + 26px);
+    background: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,0));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    mask-image: linear-gradient(#000 55%, transparent); -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  }
+  /* Icons float just below the blur, over the sharp picture, on dark glass. */
+  .camera .topbar {
+    position: absolute; top: calc(var(--safe-t) + 12px); left: 0; right: 0; z-index: 4;
+    padding: 0 14px; background: transparent;
+  }
+  .camera .topbar .icon-btn, .camera .flash-btn:not([aria-pressed="true"]) {
+    background: rgba(0,0,0,.42); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .stage { max-height: calc(100% - 150px - var(--safe-b)); }
+}
+
 /* ---------- landscape (iOS rotates the page even when installed) ---------- */
 @media (orientation: landscape) and (max-height: 560px) {
   /* Camera: controls become side rails, viewfinder takes the full height — like the native camera. */
