@@ -172,7 +172,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 @keyframes fade-in { from { opacity: 0; } }
 .panel-head {
   flex: none; display: grid; grid-template-columns: 72px 1fr 72px; align-items: center;
-  padding: calc(8px + var(--safe-t)) 8px 8px; border-bottom: 1px solid var(--line);
+  /* Same drop below the status bar as the camera's top buttons. */
+  padding: calc(22px + var(--safe-t)) 8px 10px; border-bottom: 1px solid var(--line);
 }
 .panel-head > :last-child { justify-self: end; }
 .panel-head h2 { margin: 0; font-size: 17px; text-align: center; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
