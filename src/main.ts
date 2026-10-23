@@ -812,20 +812,9 @@ async function launch() {
   }
   await startCamera()
   await geo.start()
-  // Returning users skip the Start tap: motion starts silently if it was allowed before;
-  // otherwise ask straight away (iOS needs a tap, so it's a one-button sheet).
-  if (!(await startSensors())) await askForMotion()
-}
-
-async function askForMotion() {
-  let request: Promise<boolean> = Promise.resolve(false)
-  const choice = await ask('Allow auto-rotate', 'Photos and the stamp turn with your phone when you hold it sideways.', [
-    { id: 'allow', label: 'Allow', style: 'primary', onTap: () => (request = startSensors()) },
-    { id: 'later', label: 'Not now', style: 'glass' },
-  ])
-  if (choice === 'allow' && !(await request)) {
-    toast('Motion access is off. Turn it on in Settings → Apps → Safari → Motion & Orientation Access', 5000)
-  }
+  // Returning users skip the Start tap: motion starts silently if it was allowed before,
+  // otherwise the "Enable auto-rotate" pill shows on the viewfinder (iOS needs a tap).
+  await startSensors()
 }
 
 els.start.onclick = async () => {
