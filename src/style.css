@@ -273,8 +273,9 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
     grid-template-columns: none; grid-template-rows: 1fr auto 1fr; justify-items: center;
     padding: 14px calc(18px + env(safe-area-inset-right, 0px)) 14px 18px;
   }
-  .controls > :first-child { justify-self: center; align-self: end; }
-  .controls > :last-child { justify-self: center; align-self: start; }
+  .controls > :first-child { grid-row: 3; justify-self: center; align-self: end; }   /* thumbnail: bottom */
+  .controls > :nth-child(2) { grid-row: 2; }                                          /* shutter: middle */
+  .controls > :last-child { grid-row: 1; justify-self: center; align-self: start; }  /* export: top */
 
   /* Welcome: sample photo beside the text instead of above it. */
   .welcome { flex-direction: row; }
