@@ -87,8 +87,6 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 
 /* ---------- camera ---------- */
 .camera { background: #000; touch-action: manipulation; --rot: 0deg; }
-/* Fully removed while Photos/viewer are open: WebKit kept painting its backdrop blur when merely invisible. */
-.camera.covered { display: none !important; }
 .status-blur { display: none; } /* portrait only, see below */
 /* Controls turn to stay upright when the phone is held sideways. */
 .camera .topbar .icon-btn svg, .camera .flash-btn svg, .camera .thumb, .camera .export-btn {

@@ -953,16 +953,20 @@ els.vMaps.onclick = () => {
 document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => history.back()))
 
 /**
- * Take the camera screen out of the page while Photos/viewer cover it. WebKit otherwise
- * paints the camera's status-bar backdrop blur on top of them (smearing the viewer's title).
- * The stream itself keeps running.
+ * WebKit paints the camera's status-bar backdrop blur on top of screens that cover it
+ * (it smeared the viewer's title). Hiding the whole camera broke its layout on return, so
+ * only the blur element is removed while Photos/viewer are open, and a fresh one is
+ * inserted when the camera is visible again (a re-shown backdrop layer can come back dead).
  */
 function updateCovered() {
   const covered = !els.gallery.hidden || !els.viewer.hidden
-  els.camera.classList.toggle('covered', covered)
-  if (!covered) {
-    els.video.play().catch(() => {}) // make sure the preview resumes after being display:none
-    scheduleDraw()
+  const blur = els.stage.querySelector('.status-blur')
+  if (covered) blur?.remove()
+  else if (!blur) {
+    const fresh = document.createElement('div')
+    fresh.className = 'status-blur'
+    fresh.setAttribute('aria-hidden', 'true')
+    els.stage.append(fresh)
   }
 }
 
