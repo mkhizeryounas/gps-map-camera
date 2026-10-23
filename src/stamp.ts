@@ -136,15 +136,16 @@ function drawMap(ctx: CanvasRenderingContext2D, d: StampData, map: MapImage | nu
   ctx.restore()
 }
 
-function drawClassic(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon?: CanvasImageSource | null) {
+function drawClassic(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon: CanvasImageSource | null | undefined, inset: StampInset) {
   const u = Math.min(W, H) / REF
-  const side = 14 * u
-  const bottom = 80 * u
+  const side = 14 * u + (inset.left ?? 0)
+  const sideR = 14 * u + (inset.right ?? 0)
+  const bottom = 80 * u + (inset.bottom ?? 0)
   const mapSize = 211 * u
   const cardH = 210 * u
   const top = H - bottom - cardH
   const cardX = side + mapSize + 9 * u
-  const cardW = W - side - cardX
+  const cardW = W - sideR - cardX
 
   ctx.save()
   ctx.textAlign = 'left'
@@ -164,7 +165,7 @@ function drawClassic(ctx: CanvasRenderingContext2D, W: number, H: number, d: Sta
   const iconSize = 30 * u
   const bh = 40 * u
   const bw = 10 * u + iconSize + 12 * u + ctx.measureText(badgeText).width + 14 * u
-  const bx = W - side - bw
+  const bx = W - sideR - bw
   const by = top - 10 * u - bh
   ctx.beginPath()
   ctx.roundRect(bx, by, bw, bh, 6 * u)
@@ -236,15 +237,15 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, maxLines
   return lines
 }
 
-function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon?: CanvasImageSource | null) {
+function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon: CanvasImageSource | null | undefined, inset: StampInset) {
   const u = Math.min(W, H) / MREF
-  const side = 10 * u
-  const bottom = 65 * u
+  const side = 10 * u + (inset.left ?? 0)
+  const bottom = 65 * u + (inset.bottom ?? 0)
   const panelH = 230 * u
   const top = H - bottom - panelH
   const mapW = 268 * u
   const cardX = side + mapW + 14 * u
-  const cardR = W - 12 * u
+  const cardR = W - 12 * u - (inset.right ?? 0)
   const cardW = cardR - cardX
   const pad = 12 * u // map panel text inset
 
@@ -351,7 +352,22 @@ function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: Stam
   ctx.restore()
 }
 
-export function drawStamp(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon?: CanvasImageSource | null) {
-  if (d.settings.stampStyle === 'classic') drawClassic(ctx, W, H, d, map, icon)
-  else drawModern(ctx, W, H, d, map, icon)
+/** Extra margins (in the photo's own upright frame) to keep the stamp clear of on-screen controls. */
+export interface StampInset {
+  left?: number
+  right?: number
+  bottom?: number
+}
+
+export function drawStamp(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  d: StampData,
+  map: MapImage | null,
+  icon?: CanvasImageSource | null,
+  inset: StampInset = {},
+) {
+  if (d.settings.stampStyle === 'classic') drawClassic(ctx, W, H, d, map, icon, inset)
+  else drawModern(ctx, W, H, d, map, icon, inset)
 }

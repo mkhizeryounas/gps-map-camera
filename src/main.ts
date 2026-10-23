@@ -8,7 +8,7 @@ import { haptic, installButtonHaptics } from './haptics'
 import { paintStorefront } from './demo'
 import { getRotation, onRotation, startOrientation } from './orientation'
 import { playShutter, unlockAudio } from './sound'
-import { drawStamp } from './stamp'
+import { drawStamp, type StampInset } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
 import type { PhotoRecord, Settings, StampData } from './types'
 
@@ -215,26 +215,43 @@ function stampData(date = new Date()): StampData {
 
 // ---------------------------------------------------------------------------
 // Live preview: same renderer as the saved photo, positioned over the visible video frame.
+/**
+ * The photo is the part of the viewfinder below the status-bar blur. Returns that frame in
+ * stage CSS px, plus how far the floating top controls reach into it.
+ */
+const topbarEl = document.querySelector<HTMLElement>('.camera .topbar')!
+function photoFrame() {
+  const sw = els.stage.clientWidth
+  const sh = els.stage.clientHeight
+  const floating = getComputedStyle(topbarEl).position === 'absolute' // portrait overlay layout
+  const top = floating ? Math.max(0, topbarEl.offsetTop - 8) : 0
+  const controls = floating ? topbarEl.offsetTop + topbarEl.offsetHeight + 6 - top : 0
+  return { sw, sh, top, w: sw, h: sh - top, controls }
+}
+
+/** When the phone is turned, the screen's top edge is one of the photo's sides: keep the stamp off the controls there. */
+function controlsInset(rot: number, zone: number): StampInset {
+  if (rot === 90) return { left: zone }
+  if (rot === 270) return { right: zone }
+  if (rot === 180) return { bottom: zone }
+  return {}
+}
+
 function layoutOverlay() {
   const v = els.video
-  const vw = v.videoWidth
-  const vh = v.videoHeight
-  if (!vw || !vh) return null
-  // The viewfinder fills the whole stage (object-fit: cover) and captures are cropped the
-  // same way, so the stamp preview covers the stage exactly.
-  const w = els.stage.clientWidth
-  const h = els.stage.clientHeight
-  if (!w || !h) return null
+  if (!v.videoWidth || !v.videoHeight) return null
+  const f = photoFrame()
+  if (!f.w || !f.h) return null
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const c = els.overlay
-  Object.assign(c.style, { left: '0px', top: '0px', width: `${w}px`, height: `${h}px` })
-  const pw = Math.round(w * dpr)
-  const ph = Math.round(h * dpr)
+  Object.assign(c.style, { left: '0px', top: `${f.top}px`, width: `${f.w}px`, height: `${f.h}px` })
+  const pw = Math.round(f.w * dpr)
+  const ph = Math.round(f.h * dpr)
   if (c.width !== pw || c.height !== ph) {
     c.width = pw
     c.height = ph
   }
-  return { pw, ph }
+  return { pw, ph, dpr, controls: f.controls }
 }
 
 function drawOverlay() {
@@ -251,7 +268,7 @@ function drawOverlay() {
   ctx.translate(size.pw / 2, size.ph / 2)
   ctx.rotate((rot * Math.PI) / 180)
   ctx.translate(-W / 2, -H / 2)
-  drawStamp(ctx, W, H, stampData(), state.map, icon())
+  drawStamp(ctx, W, H, stampData(), state.map, icon(), controlsInset(rot, size.controls * size.dpr))
   ctx.restore()
 }
 
@@ -387,14 +404,15 @@ async function capture() {
   }
 
   try {
-    // Crop to exactly what the viewfinder shows (cover, centred)…
-    const stageAR = els.stage.clientWidth / els.stage.clientHeight || vw / vh
-    let cw = vw
-    let ch = vh
-    if (vw / vh > stageAR) cw = Math.round(vh * stageAR)
-    else ch = Math.round(vw / stageAR)
-    const sx = (vw - cw) / 2
-    const sy = (vh - ch) / 2
+    // Crop to exactly the photo frame on screen (viewfinder is object-fit: cover, centred)…
+    const f = photoFrame()
+    const scale = Math.max(f.sw / vw, f.sh / vh) // screen px per frame px
+    const ox = (f.sw - vw * scale) / 2
+    const oy = (f.sh - vh * scale) / 2
+    const sx = Math.max(0, -ox / scale)
+    const sy = Math.max(0, (f.top - oy) / scale)
+    const cw = Math.round(Math.min(vw - sx, f.w / scale))
+    const ch = Math.round(Math.min(vh - sy, f.h / scale))
     // …and rotate so the saved photo is upright however the phone was held.
     const swap = rot % 180 !== 0
     const W = swap ? ch : cw
@@ -418,7 +436,7 @@ async function capture() {
       5000,
       state.map,
     )
-    drawStamp(ctx, W, H, data, map, icon())
+    drawStamp(ctx, W, H, data, map, icon(), controlsInset(rot, f.controls / scale))
 
     const id = crypto.randomUUID()
     const blob = withExif(canvas.toDataURL('image/jpeg', state.settings.quality), buildExif(data, W, H, id))
