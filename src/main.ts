@@ -123,7 +123,6 @@ async function startCamera() {
     })
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})
-    recheckTorchSoon()
     renderFlash()
   } catch (e) {
     const name = (e as DOMException).name
@@ -136,14 +135,17 @@ async function startCamera() {
 const track = () => state.stream?.getVideoTracks()[0]
 const torchSupported = () => !!(track()?.getCapabilities?.() as { torch?: boolean } | undefined)?.torch
 
+/** Turns the torch on/off. Tried even when the camera doesn't advertise a torch: some accept it anyway. */
 async function setTorch(on: boolean) {
   const t = track()
-  if (!t || !torchSupported()) return false
+  if (!t) return false
   // Browsers differ on where they accept the torch constraint; try both forms.
   for (const c of [{ advanced: [{ torch: on }] }, { torch: on }] as unknown as MediaTrackConstraints[]) {
     try {
       await t.applyConstraints(c)
-      return true
+      // Some browsers accept the constraint silently without a torch; trust it only if reported.
+      const set = (t.getSettings() as MediaTrackSettings & { torch?: boolean }).torch
+      if (set === undefined || set === on || torchSupported()) return true
     } catch {
       /* try the next form */
     }
@@ -151,30 +153,32 @@ async function setTorch(on: boolean) {
   return false
 }
 
-/**
- * Cameras report torch support a moment after they start, so the button stays visible while
- * starting up and is only hidden if the camera still has no torch a few seconds later.
- */
-let torchChecked = false
-let torchTimer = 0
-function recheckTorchSoon() {
-  torchChecked = false
-  clearTimeout(torchTimer)
-  torchTimer = window.setTimeout(() => {
-    torchChecked = true
-    renderFlash()
-  }, 3000)
+type PhotoCapture = {
+  getPhotoCapabilities(): Promise<{ fillLightMode?: string[] }>
+  takePhoto(settings?: { fillLightMode?: string }): Promise<Blob>
+}
+
+/** Fallback flash: a still photo with the camera's own flash (ImageCapture, e.g. Android Chrome). */
+async function flashPhoto(): Promise<ImageBitmap | null> {
+  const t = track()
+  const IC = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => PhotoCapture }).ImageCapture
+  if (!t || !IC) return null
+  try {
+    const ic = new IC(t)
+    const caps = await ic.getPhotoCapabilities()
+    if (!caps.fillLightMode?.includes('flash')) return null
+    return await createImageBitmap(await ic.takePhoto({ fillLightMode: 'flash' }))
+  } catch {
+    return null
+  }
 }
 
 function renderFlash() {
-  const show = torchSupported() || !torchChecked
-  els.flashBtn.style.visibility = show ? 'visible' : 'hidden'
   els.flashBtn.setAttribute('aria-pressed', String(state.flash))
   els.flashBtn.setAttribute('aria-label', state.flash ? 'Flash on' : 'Flash off')
 }
 
 function toggleFlash() {
-  if (!torchSupported()) return toast('Flash is getting ready — try again in a moment')
   state.flash = !state.flash
   try {
     localStorage.setItem('gps-map-camera:flash', state.flash ? 'on' : 'off')
@@ -344,15 +348,27 @@ async function capture() {
   void els.flash.offsetWidth
   els.flash.classList.add('go')
 
-  // Let exposure settle under the torch before grabbing the frame.
-  const flashed = state.flash && torchSupported() && (await setTorch(true))
-  if (state.flash && torchSupported() && !flashed) toast('Flash didn’t fire')
-  if (flashed) await new Promise((r) => setTimeout(r, 450))
+  // Flash: torch first (lets exposure settle before grabbing the frame), then the camera's
+  // own photo flash, and only if neither exists tell the user.
+  let source: CanvasImageSource = v
+  let vw = v.videoWidth
+  let vh = v.videoHeight
+  let flashed = false
+  if (state.flash) {
+    flashed = await setTorch(true)
+    if (flashed) await new Promise((r) => setTimeout(r, 600))
+    else {
+      const shot = await flashPhoto()
+      if (shot) {
+        source = shot
+        vw = shot.width
+        vh = shot.height
+      } else toast('This browser can’t fire the flash')
+    }
+  }
 
   try {
     // Rotate the frame so the saved photo is upright however the phone was held.
-    const vw = v.videoWidth
-    const vh = v.videoHeight
     const swap = rot % 180 !== 0
     const W = swap ? vh : vw
     const H = swap ? vw : vh
@@ -363,7 +379,7 @@ async function capture() {
     ctx.save()
     ctx.translate(W / 2, H / 2)
     ctx.rotate((-rot * Math.PI) / 180)
-    ctx.drawImage(v, -vw / 2, -vh / 2, vw, vh)
+    ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh)
     ctx.restore()
     if (flashed) setTorch(false)
 
@@ -898,7 +914,6 @@ els.install.onclick = async () => {
 }
 if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) els.iosHint.hidden = false
 
-els.video.addEventListener('playing', renderFlash)
 els.video.addEventListener('loadedmetadata', () => {
   renderFlash() // some Android cameras only report torch support once frames arrive
   scheduleDraw()
