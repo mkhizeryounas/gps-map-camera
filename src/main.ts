@@ -215,9 +215,6 @@ function stampData(date = new Date()): StampData {
 
 // ---------------------------------------------------------------------------
 // Live preview: same renderer as the saved photo, positioned over the visible video frame.
-const landscapeRails = matchMedia('(orientation: landscape) and (max-height: 560px)')
-landscapeRails.addEventListener('change', () => scheduleDraw())
-
 function layoutOverlay() {
   const v = els.video
   const vw = v.videoWidth
@@ -230,11 +227,7 @@ function layoutOverlay() {
   const h = vh * scale
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const c = els.overlay
-  // Portrait: picture is pinned to the top of the stage (object-position); landscape: centred.
-  const top = landscapeRails.matches ? (sh - h) / 2 : 0
-  Object.assign(c.style, { left: `${(sw - w) / 2}px`, top: `${top}px`, width: `${w}px`, height: `${h}px` })
-  // Let the shutter row centre itself in the space below the picture.
-  els.camera.style.setProperty('--vb', `${els.stage.offsetTop + top + h}px`)
+  Object.assign(c.style, { left: `${(sw - w) / 2}px`, top: `${(sh - h) / 2}px`, width: `${w}px`, height: `${h}px` })
   const pw = Math.round(w * dpr)
   const ph = Math.round(h * dpr)
   if (c.width !== pw || c.height !== ph) {
@@ -333,7 +326,8 @@ function updateGpsPill() {
   pill.classList.remove('good', 'bad')
   if (geo.fix) {
     const acc = Math.round(geo.fix.accuracy)
-    label.textContent = `GPS ±${acc} m`
+    const city = geo.place?.title.split(',')[0].trim()
+    label.textContent = city ? `GPS ±${acc} m · ${city}` : `GPS ±${acc} m`
     if (acc <= 25) pill.classList.add('good')
   } else if (geo.error) {
     label.textContent = geo.error
@@ -935,7 +929,30 @@ els.install.onclick = async () => {
 }
 if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) els.iosHint.hidden = false
 
+// iOS installed apps with a translucent status bar can lay the page out one status-bar
+// short of the screen, leaving a dead strip at the bottom. Measure and stretch to the real height.
+function fitAppHeight() {
+  const standalone =
+    matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone
+  const portrait = window.innerHeight > window.innerWidth
+  const full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)
+  const short = full - window.innerHeight
+  const root = document.documentElement
+  if (standalone && short > 16 && short < 100) root.style.setProperty('--app-h', `${full}px`)
+  else root.style.removeProperty('--app-h')
+}
+fitAppHeight()
+window.addEventListener('resize', fitAppHeight)
+
+// Size the viewfinder to the camera's exact shape (changes when iOS rotates the stream).
+const fitStage = () => {
+  const v = els.video
+  if (v.videoWidth && v.videoHeight) els.camera.style.setProperty('--ar', `${v.videoWidth} / ${v.videoHeight}`)
+  scheduleDraw()
+}
+els.video.addEventListener('resize', fitStage)
 els.video.addEventListener('loadedmetadata', () => {
+  fitStage()
   renderFlash() // some Android cameras only report torch support once frames arrive
   scheduleDraw()
 })
