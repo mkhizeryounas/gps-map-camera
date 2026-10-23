@@ -22,6 +22,7 @@ export interface Settings {
   mapStyle: MapStyle
   quality: number
   shutterSound: boolean
+  stampStyle: 'modern' | 'classic'
 }
 
 export interface StampData {

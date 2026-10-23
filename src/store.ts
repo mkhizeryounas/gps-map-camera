@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mapStyle: 'satellite',
   quality: 0.92,
   shutterSound: true,
+  stampStyle: 'modern',
 }
 
 export function loadSettings(): Settings {

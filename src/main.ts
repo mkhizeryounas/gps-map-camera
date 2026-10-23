@@ -672,6 +672,7 @@ function openSettings() {
   ;(f.elements.namedItem('ntn') as HTMLInputElement).value = s.ntn
   ;(f.elements.namedItem('note') as HTMLInputElement).value = s.note
   ;(f.elements.namedItem('shutterSound') as HTMLInputElement).checked = s.shutterSound
+  f.querySelectorAll<HTMLInputElement>('input[name=stampStyle]').forEach((r) => (r.checked = r.value === s.stampStyle))
   f.querySelectorAll<HTMLInputElement>('input[name=mapStyle]').forEach((r) => (r.checked = r.value === s.mapStyle))
   els.sheetBackdrop.hidden = false
   els.settings.hidden = false
@@ -687,6 +688,7 @@ function closeSettings() {
     note: String(f.get('note') ?? '').trim(),
     mapStyle: f.get('mapStyle') === 'street' ? 'street' : 'satellite',
     shutterSound: f.get('shutterSound') === 'on',
+    stampStyle: f.get('stampStyle') === 'classic' ? 'classic' : 'modern',
   }
   saveSettings(state.settings)
   els.sheetBackdrop.hidden = true
