@@ -5,6 +5,7 @@ import { fileStamp, shortDate } from './format'
 import { distance, GeoTracker } from './geo'
 import { renderMap, type MapImage } from './map'
 import { haptic, installButtonHaptics } from './haptics'
+import { paintStorefront } from './demo'
 import { drawStamp } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
 import type { PhotoRecord, Settings, StampData } from './types'
@@ -657,110 +658,6 @@ function closeSettings() {
 
 // ---------------------------------------------------------------------------
 // Welcome demo: a sample storefront stamped exactly as real photos will be.
-function paintStorefront(ctx: CanvasRenderingContext2D, W: number, H: number) {
-  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.45)
-  sky.addColorStop(0, '#8ec5e8')
-  sky.addColorStop(1, '#dcebf3')
-  ctx.fillStyle = sky
-  ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = '#e8dcc4'
-  ctx.fillRect(W * 0.06, H * 0.1, W * 0.88, H * 0.9)
-  ctx.fillStyle = '#d6c7a9'
-  for (let i = 0; i < 4; i++) ctx.fillRect(W * (0.12 + i * 0.21), H * 0.17, W * 0.13, H * 0.13)
-  drawSignboard(ctx, W * 0.1, H * 0.34, W * 0.8, H * 0.15)
-  for (let i = 0; i < 3; i++) {
-    const x = W * (0.1 + i * 0.27)
-    const g = ctx.createLinearGradient(0, H * 0.5, 0, H)
-    g.addColorStop(0, '#9aa3ad')
-    g.addColorStop(1, '#6b737c')
-    ctx.fillStyle = g
-    ctx.fillRect(x, H * 0.5, W * 0.24, H * 0.5)
-    ctx.fillStyle = 'rgba(0,0,0,0.12)'
-    for (let y = H * 0.5; y < H; y += H * 0.02) ctx.fillRect(x, y, W * 0.24, H * 0.004)
-  }
-}
-
-const SIGN_SERIF = `"Playfair Display", Georgia, "Times New Roman", serif`
-const GOLD = '#e7c46a'
-
-/** Sample shop sign: green board, gold trim, round "JY" monogram and a serif wordmark. */
-function drawSignboard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  ctx.save()
-  // board with soft drop shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.25)'
-  ctx.shadowBlur = h * 0.15
-  ctx.shadowOffsetY = h * 0.06
-  const board = ctx.createLinearGradient(0, y, 0, y + h)
-  board.addColorStop(0, '#14532d')
-  board.addColorStop(1, '#0b3b20')
-  ctx.fillStyle = board
-  ctx.beginPath()
-  ctx.roundRect(x, y, w, h, h * 0.08)
-  ctx.fill()
-  ctx.shadowColor = 'transparent'
-  // double gold trim
-  ctx.strokeStyle = GOLD
-  ctx.lineWidth = h * 0.035
-  ctx.beginPath()
-  ctx.roundRect(x + h * 0.07, y + h * 0.07, w - h * 0.14, h - h * 0.14, h * 0.05)
-  ctx.stroke()
-  ctx.lineWidth = h * 0.012
-  ctx.beginPath()
-  ctx.roundRect(x + h * 0.12, y + h * 0.12, w - h * 0.24, h - h * 0.24, h * 0.03)
-  ctx.stroke()
-
-  // monogram emblem
-  const r = h * 0.3
-  const cx = x + h * 0.28 + r
-  const cy = y + h / 2
-  const disc = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r)
-  disc.addColorStop(0, '#f6dc8f')
-  disc.addColorStop(1, '#b8892f')
-  ctx.fillStyle = disc
-  ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.strokeStyle = '#0b3b20'
-  ctx.lineWidth = r * 0.06
-  ctx.beginPath()
-  ctx.arc(cx, cy, r * 0.84, 0, Math.PI * 2)
-  ctx.stroke()
-  ctx.fillStyle = '#0b3b20'
-  ctx.font = `800 ${r * 0.95}px ${SIGN_SERIF}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('JY', cx, cy + r * 0.05)
-
-  // wordmark + tagline, scaled to fit the space right of the emblem
-  const left = cx + r + h * 0.22
-  const right = x + w - h * 0.3
-  const mid = (left + right) / 2
-  const maxW = right - left
-  let size = h * 0.42
-  ctx.font = `700 ${size}px ${SIGN_SERIF}`
-  while (ctx.measureText('JY & Sons').width > maxW && size > h * 0.2) {
-    size *= 0.95
-    ctx.font = `700 ${size}px ${SIGN_SERIF}`
-  }
-  const word = ctx.createLinearGradient(0, cy - size / 2, 0, cy + size / 2)
-  word.addColorStop(0, '#fff7dc')
-  word.addColorStop(1, GOLD)
-  ctx.fillStyle = word
-  ctx.fillText('JY & Sons', mid, cy - h * 0.08)
-
-  ctx.fillStyle = 'rgba(231,196,106,0.9)'
-  const tag = 'GENERAL TRADERS  ·  LAHORE'
-  const spaced = 'letterSpacing' in ctx ? (ctx as CanvasRenderingContext2D & { letterSpacing: string }) : null
-  let tagSize = h * 0.1
-  do {
-    ctx.font = `600 ${tagSize}px -apple-system, Roboto, sans-serif`
-    if (spaced) spaced.letterSpacing = `${tagSize * 0.3}px`
-    tagSize *= 0.94
-  } while (ctx.measureText(tag).width > maxW && tagSize > h * 0.05)
-  ctx.fillText(tag, mid, cy + h * 0.25)
-  ctx.restore()
-}
-
 let demoTimer = 0
 async function startDemo() {
   const c = els.demo
