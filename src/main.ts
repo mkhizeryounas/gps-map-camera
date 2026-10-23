@@ -937,21 +937,6 @@ els.install.onclick = async () => {
 }
 if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) els.iosHint.hidden = false
 
-// iOS installed apps with a translucent status bar can lay the page out one status-bar
-// short of the screen, leaving a dead strip at the bottom. Measure and stretch to the real height.
-function fitAppHeight() {
-  const standalone =
-    matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone
-  const portrait = window.innerHeight > window.innerWidth
-  const full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)
-  const short = full - window.innerHeight
-  const root = document.documentElement
-  if (standalone && short > 16 && short < 100) root.style.setProperty('--app-h', `${full}px`)
-  else root.style.removeProperty('--app-h')
-}
-fitAppHeight()
-window.addEventListener('resize', fitAppHeight)
-
 els.video.addEventListener('resize', scheduleDraw)
 els.video.addEventListener('loadedmetadata', () => {
   scheduleDraw()

@@ -42,6 +42,7 @@
         <button class="flash-btn" id="flashBtn" aria-label="Flash off" aria-pressed="false">
           <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/><path class="slash" d="M3 3l18 18"/></svg>
         </button>
+        <div class="gps-pill" id="gpsPill"><i></i><span>Locating…</span></div>
         <div class="top-actions">
           <button class="icon-btn attn" id="motionBtn" aria-label="Enable auto-rotate" title="Enable auto-rotate" data-haptic="none" hidden>
             <svg viewBox="0 0 24 24"><rect x="8" y="5" width="8" height="14" rx="1.6"/><path d="M3.5 9.5A9 9 0 0 1 9 3.6"/><path d="M6.4 3.2 9 3.6l-.4 2.6"/><path d="M20.5 14.5A9 9 0 0 1 15 20.4"/><path d="M17.6 20.8 15 20.4l.4-2.6"/></svg>
@@ -58,9 +59,8 @@
         <div class="flash" id="flash"></div>
       </div>
 
-      <!-- Below the 3:4 picture: GPS status row, then the shutter row (like the iPhone camera's mode strip). -->
+      <!-- Shutter row under the viewfinder. -->
       <div class="bottom">
-        <div class="gps-pill" id="gpsPill"><i></i><span>Locating…</span></div>
         <footer class="controls">
           <button class="thumb" id="thumbBtn" aria-label="Open photos"><img id="thumbImg" alt="" hidden /><b id="countBadge" hidden></b></button>
           <!-- A real <input switch> under the shutter: tapping it toggles natively, which is what plays the iOS haptic. -->

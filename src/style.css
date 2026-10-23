@@ -16,7 +16,17 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #000; color: var(--text); overflow: hidden; }
+html, body {
+  position: relative; margin: 0; height: 100%; background: #000; color: var(--text); overflow: hidden; }
+/* THE CHIN GAP FIX (same as arbia-mobile's theme): with viewport-fit=cover + a black-translucent
+   status bar, iOS shifts an installed app up behind the status bar without growing the viewport,
+   so anything sized to the viewport (position: fixed, height: 100%) ends ~59px short of the
+   screen. In standalone, 100vh reaches the real bottom; in a browser tab 100% is correct (100vh
+   would sit behind Safari's toolbar). Screens are therefore positioned against body, not the
+   viewport: absolute, never fixed. */
+@media (display-mode: standalone) {
+  html, body { height: 100vh; }
+}
 body {
   font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -27,9 +37,7 @@ body {
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
 svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-.screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
-/* --app-h is set in JS only when iOS lays an installed app out shorter than the screen. */
-:root[style*="--app-h"] .screen { bottom: auto; height: var(--app-h); }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
 
 /* ---------- buttons ---------- */
 .btn { border-radius: 14px; padding: 12px 18px; font-weight: 600; transition: transform .12s, opacity .12s; }
@@ -89,6 +97,10 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .topbar .icon-btn { width: 40px; height: 40px; background: rgba(255,255,255,.1); }
 .topbar .icon-btn svg { width: 20px; height: 20px; }
 .top-actions { display: flex; gap: 8px; }
+/* Portrait/browser: flash | GPS (centred) | actions */
+.topbar { display: grid; grid-template-columns: 1fr auto 1fr; }
+.topbar > :first-child { justify-self: start; }
+.topbar .top-actions { justify-self: end; }
 .flash-btn {
   width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
   background: rgba(255,255,255,.1); color: #fff;
@@ -126,7 +138,6 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   padding: 12px 0 calc(12px + var(--safe-b)); background: #000;
 }
-.bottom .gps-pill { height: 34px; font-size: 13.5px; }
 .controls { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 28px; }
 .controls > :first-child { justify-self: start; }
 .controls > :last-child { justify-self: end; }
@@ -222,7 +233,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 
 /* ---------- undo bar ---------- */
 .snack {
-  position: fixed; left: 12px; right: 12px; bottom: calc(16px + var(--safe-b)); z-index: 25; margin: 0 auto; max-width: 480px;
+  position: absolute; left: 12px; right: 12px; bottom: calc(16px + var(--safe-b)); z-index: 25; margin: 0 auto; max-width: 480px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 10px 12px 16px; border-radius: 16px;
   background: #23272f; border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5); font-size: 14.5px; font-weight: 500;
   transform: translateY(20px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.2,.9,.3,1), opacity .2s;
@@ -231,10 +242,10 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .snack button { color: #4ade80; font-weight: 700; padding: 6px 10px; border-radius: 8px; }
 
 /* ---------- settings sheet ---------- */
-.sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 8; animation: fade .2s; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); z-index: 8; animation: fade .2s; }
 @keyframes fade { from { opacity: 0; } }
 .sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; margin: 0 auto; max-width: 560px;
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; margin: 0 auto; max-width: 560px;
   background: var(--surface); border-radius: 22px 22px 0 0; border: 1px solid var(--line);
   padding: 8px 20px calc(20px + var(--safe-b)); animation: up .25s cubic-bezier(.2,.9,.3,1);
   max-height: 90vh; overflow-y: auto; user-select: text;
@@ -264,7 +275,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 
 /* ---------- toast ---------- */
 .toast {
-  position: fixed; left: 50%; top: calc(64px + var(--safe-t)); transform: translate(-50%, -20px); z-index: 20;
+  position: absolute; left: 50%; top: calc(64px + var(--safe-t)); transform: translate(-50%, -20px); z-index: 20;
   background: rgba(20,22,28,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line); padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 500;
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px); text-align: center;
@@ -286,7 +297,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
     position: absolute; top: calc(var(--safe-t) + 26px); left: 0; right: 0; z-index: 4;
     padding: 0 14px; background: transparent;
   }
-  .camera .topbar .icon-btn, .camera .flash-btn:not([aria-pressed="true"]) {
+  .camera .topbar .icon-btn, .camera .topbar .gps-pill, .camera .flash-btn:not([aria-pressed="true"]) {
     background: rgba(0,0,0,.42); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
 }
@@ -295,11 +306,11 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 @media (orientation: landscape) and (max-height: 560px) {
   /* Camera: controls become side rails, viewfinder takes the full height — like the native camera. */
   .camera { flex-direction: row; }
-  .topbar { flex-direction: column; padding: 14px 10px 14px calc(10px + env(safe-area-inset-left, 0px)); }
+  .topbar { display: flex; flex-direction: column; padding: 14px 10px 14px calc(10px + env(safe-area-inset-left, 0px)); }
   .top-actions { flex-direction: column; }
+  .topbar .gps-pill { writing-mode: vertical-rl; transform: rotate(180deg); height: auto; width: 32px; padding: 12px 0; }
   .stage { height: 100%; }
-  .bottom { flex: none; flex-direction: row; padding: 14px calc(14px + env(safe-area-inset-right, 0px)) 14px 10px; gap: 10px; }
-  .bottom .gps-pill { writing-mode: vertical-rl; transform: rotate(180deg); height: auto; width: 32px; padding: 12px 0; }
+  .bottom { flex: none; padding: 14px calc(14px + env(safe-area-inset-right, 0px)) 14px 10px; }
   .controls {
     width: auto; height: 100%; grid-template-columns: none; grid-template-rows: 1fr auto 1fr; justify-items: center; padding: 0;
   }
