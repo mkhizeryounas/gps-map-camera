@@ -272,7 +272,6 @@ onRotation(applyRotation)
  * Outside a tap it still succeeds when access was granted before.
  */
 let motionReady = false
-let rotateHintShown = false
 let motionAsking: Promise<'granted' | 'denied' | 'blocked'> | null = null
 /** Must run as the first thing inside a tap on iOS, or the permission prompt is refused. */
 function startSensors(): Promise<'granted' | 'denied' | 'blocked'> {
@@ -282,10 +281,6 @@ function startSensors(): Promise<'granted' | 'denied' | 'blocked'> {
     motionReady = res === 'granted'
     if (motionReady) startOrientation()
     els.motionBtn.hidden = motionReady || els.camera.hidden
-    if (!els.motionBtn.hidden && !rotateHintShown) {
-      rotateHintShown = true
-      toast('Tap the rotate icon to turn on auto-rotate', 3500)
-    }
     return res
   })
   return motionAsking
