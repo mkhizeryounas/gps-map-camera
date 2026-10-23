@@ -673,7 +673,7 @@ function paintStorefront(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.font = `800 ${H * 0.07}px -apple-system, Roboto, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('KHAN TRADERS', W / 2, H * 0.42)
+  ctx.fillText('JY & SONS', W / 2, H * 0.42)
   ctx.textAlign = 'left'
   for (let i = 0; i < 3; i++) {
     const x = W * (0.1 + i * 0.27)
