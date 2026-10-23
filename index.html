@@ -56,6 +56,8 @@
       <div class="stage" id="stage">
         <video id="video" playsinline muted autoplay></video>
         <canvas id="overlay"></canvas>
+        <!-- Status-bar blur: a real element beside the video (WebKit drops backdrop blur on pseudo-elements). -->
+        <div class="status-blur" aria-hidden="true"></div>
         <div class="flash" id="flash"></div>
       </div>
 

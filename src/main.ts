@@ -121,7 +121,9 @@ async function startCamera() {
   try {
     state.stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 4032 }, height: { ideal: 3024 } },
+      // 4K 16:9: in portrait that's ~9:16, the shape of the full-height viewfinder, so the
+      // crop keeps nearly every pixel (a 4:3 stream would lose ~40% to the crop).
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } },
     })
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})

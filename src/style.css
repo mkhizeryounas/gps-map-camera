@@ -89,6 +89,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .camera { background: #000; touch-action: manipulation; --rot: 0deg; }
 /* Fully removed while Photos/viewer are open: WebKit kept painting its backdrop blur when merely invisible. */
 .camera.covered { display: none !important; }
+.status-blur { display: none; } /* portrait only, see below */
 /* Controls turn to stay upright when the phone is held sideways. */
 .camera .topbar .icon-btn svg, .camera .flash-btn svg, .camera .thumb, .camera .export-btn {
   transform: rotate(var(--rot)); transition: transform .35s cubic-bezier(.2,.9,.3,1);
@@ -291,8 +292,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 /* ---------- portrait camera: picture from the very top, blur only over the status bar ---------- */
 @media not all and (orientation: landscape) and (max-height: 560px) {
   /* Progressive blur over the status-bar strip, fading into the picture. */
-  .camera::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; z-index: 3; pointer-events: none;
+  .status-blur {
+    display: block; position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
     height: calc(var(--safe-t) + 18px);
     background: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,0));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
