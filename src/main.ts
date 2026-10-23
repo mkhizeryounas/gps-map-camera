@@ -709,6 +709,7 @@ function openGallery() {
   state.selected.clear()
   renderGallery()
   els.gallery.hidden = false
+  updateCovered()
   history.pushState({ view: 'gallery' }, '')
 }
 
@@ -745,6 +746,7 @@ function updateViewerTitle() {
 
 function openViewer(index: number) {
   els.viewer.hidden = false
+  updateCovered()
   renderViewer(index)
   history.pushState({ view: 'viewer' }, '')
 }
@@ -929,6 +931,15 @@ els.vMaps.onclick = () => {
 }
 document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => history.back()))
 
+/**
+ * Hide the camera screen while Photos/viewer cover it. WebKit otherwise paints the
+ * camera's status-bar backdrop blur on top of them (smearing the viewer's title).
+ * The stream keeps running, so returning to the camera is instant.
+ */
+function updateCovered() {
+  els.camera.classList.toggle('covered', !els.gallery.hidden || !els.viewer.hidden)
+}
+
 // Back button / gesture closes the top-most panel.
 window.addEventListener('popstate', () => {
   if (!els.ask.hidden) {
@@ -940,6 +951,7 @@ window.addEventListener('popstate', () => {
   } else if (!els.gallery.hidden) {
     els.gallery.hidden = true
   }
+  updateCovered()
   if (els.snack.classList.contains('show')) placeSnack()
 })
 
