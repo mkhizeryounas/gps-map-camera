@@ -123,6 +123,7 @@ async function startCamera() {
     })
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})
+    renderFlash()
   } catch (e) {
     const name = (e as DOMException).name
     toast(name === 'NotAllowedError' ? 'Camera permission denied — enable it in browser settings' : 'Could not open camera', 4000)
@@ -137,21 +138,29 @@ const torchSupported = () => !!(track()?.getCapabilities?.() as { torch?: boolea
 async function setTorch(on: boolean) {
   const t = track()
   if (!t || !torchSupported()) return false
-  try {
-    await t.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] })
-    return true
-  } catch {
-    return false
+  // Browsers differ on where they accept the torch constraint; try both forms.
+  for (const c of [{ advanced: [{ torch: on }] }, { torch: on }] as unknown as MediaTrackConstraints[]) {
+    try {
+      await t.applyConstraints(c)
+      return true
+    } catch {
+      /* try the next form */
+    }
   }
+  return false
 }
 
+/** The flash button only appears when the camera exposes a torch (e.g. Android Chrome; not iPhone Safari). */
 function renderFlash() {
-  els.flashBtn.setAttribute('aria-pressed', String(state.flash))
+  const supported = torchSupported()
+  els.flashBtn.style.visibility = supported ? 'visible' : 'hidden'
+  els.flashBtn.disabled = !supported
+  els.flashBtn.setAttribute('aria-pressed', String(supported && state.flash))
   els.flashBtn.setAttribute('aria-label', state.flash ? 'Flash on' : 'Flash off')
 }
 
 function toggleFlash() {
-  if (!torchSupported()) return toast('Flash isn’t available in this browser')
+  if (!torchSupported()) return
   state.flash = !state.flash
   try {
     localStorage.setItem('gps-map-camera:flash', state.flash ? 'on' : 'off')
@@ -228,7 +237,12 @@ onRotation(applyRotation)
 function startSensors() {
   if (state.compassAsked) return
   state.compassAsked = true
-  geo.startCompass().then((ok) => ok && startOrientation())
+  geo.startCompass().then((ok) => {
+    if (ok) return startOrientation()
+    // Prompt dismissed or not inside a tap: try again on the next one.
+    state.compassAsked = false
+    document.addEventListener('click', startSensors, { once: true, capture: true })
+  })
 }
 
 let rafPending = false
@@ -310,7 +324,8 @@ async function capture() {
   els.flash.classList.add('go')
 
   // Let exposure settle under the torch before grabbing the frame.
-  const flashed = state.flash && (await setTorch(true))
+  const flashed = state.flash && torchSupported() && (await setTorch(true))
+  if (state.flash && torchSupported() && !flashed) toast('Flash didn’t fire')
   if (flashed) await new Promise((r) => setTimeout(r, 450))
 
   try {
@@ -843,8 +858,13 @@ els.install.onclick = async () => {
 }
 if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) els.iosHint.hidden = false
 
-els.video.addEventListener('loadedmetadata', scheduleDraw)
+els.video.addEventListener('loadedmetadata', () => {
+  renderFlash() // some Android cameras only report torch support once frames arrive
+  scheduleDraw()
+})
 window.addEventListener('resize', scheduleDraw)
+screen.orientation?.addEventListener('change', scheduleDraw)
+window.addEventListener('orientationchange', scheduleDraw)
 setInterval(scheduleDraw, 1000) // keep the clock on the preview ticking
 
 // Never lose a pending delete if the app is closed during the undo window.

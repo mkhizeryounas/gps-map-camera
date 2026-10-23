@@ -259,3 +259,26 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- landscape (iOS rotates the page even when installed) ---------- */
+@media (orientation: landscape) and (max-height: 560px) {
+  /* Camera: controls become side rails, viewfinder takes the full height — like the native camera. */
+  .camera { flex-direction: row; }
+  .topbar {
+    grid-template-columns: none; grid-template-rows: 40px 1fr 40px; justify-items: center;
+    padding: 14px 10px 14px calc(10px + env(safe-area-inset-left, 0px));
+  }
+  .topbar .gps-pill { writing-mode: vertical-rl; transform: rotate(180deg); height: auto; width: 32px; padding: 12px 0; }
+  .controls {
+    grid-template-columns: none; grid-template-rows: 1fr auto 1fr; justify-items: center;
+    padding: 14px calc(18px + env(safe-area-inset-right, 0px)) 14px 18px;
+  }
+  .controls > :first-child { justify-self: center; align-self: end; }
+  .controls > :last-child { justify-self: center; align-self: start; }
+
+  /* Welcome: sample photo beside the text instead of above it. */
+  .welcome { flex-direction: row; }
+  .hero { flex: 1; }
+  .hero::after { display: none; }
+  .welcome-card { width: min(46vw, 440px); overflow-y: auto; align-content: center; padding: 16px 20px; padding-right: calc(20px + env(safe-area-inset-right, 0px)); }
+}
