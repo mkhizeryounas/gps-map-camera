@@ -7,6 +7,7 @@ import { renderMap, type MapImage } from './map'
 import { haptic, installButtonHaptics } from './haptics'
 import { paintStorefront } from './demo'
 import { getRotation, onRotation, startOrientation } from './orientation'
+import { attachZoom } from './zoom'
 import { playShutter, unlockAudio } from './sound'
 import { drawStamp, type StampInset } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
@@ -715,28 +716,45 @@ function openGallery() {
 
 // Viewer: one slide per photo, swiped with native scroll-snap.
 function renderViewer(index: number) {
+  zoom.reset()
   els.track.innerHTML = ''
   for (const p of state.photos) {
     const slide = document.createElement('div')
     slide.className = 'slide'
     const img = document.createElement('img')
     img.alt = ''
-    img.loading = 'lazy'
-    img.src = fullUrl(p)
+    img.decoding = 'async'
+    img.src = thumbUrl(p) // light placeholder; full resolution is loaded around the current photo
     slide.append(img)
     els.track.append(slide)
   }
   state.viewIndex = index
+  loadNearby(index)
   requestAnimationFrame(() => {
     els.track.scrollTo({ left: index * els.track.clientWidth, behavior: 'instant' as ScrollBehavior })
     updateViewerTitle()
   })
 }
 
+/** Full-resolution images only for the current photo and its neighbours; keeps swiping smooth. */
+function loadNearby(index: number) {
+  for (let i = index - 1; i <= index + 1; i++) {
+    const p = state.photos[i]
+    const img = els.track.children[i]?.querySelector('img')
+    if (p && img && img.dataset.full !== '1') {
+      img.dataset.full = '1'
+      img.src = fullUrl(p)
+    }
+  }
+}
+
 function updateViewerTitle() {
   const w = els.track.clientWidth || 1
   const i = Math.max(0, Math.min(state.photos.length - 1, Math.round(els.track.scrollLeft / w)))
-  if (i !== state.viewIndex && !els.viewer.hidden) haptic('light')
+  if (i !== state.viewIndex) {
+    zoom.reset()
+    loadNearby(i)
+  }
   state.viewIndex = i
   const p = state.photos[state.viewIndex]
   if (!p) return
@@ -920,6 +938,7 @@ els.deleteSel.onclick = async () => {
 els.exportSel.onclick = () => exportPhotos(selectedPhotos())
 els.snackUndo.onclick = undoDelete
 els.track.addEventListener('scroll', () => requestAnimationFrame(updateViewerTitle), { passive: true })
+const zoom = attachZoom(els.track, () => els.track.children[state.viewIndex]?.querySelector('img') ?? null)
 els.vShare.onclick = () => {
   const p = state.photos[state.viewIndex]
   if (p) exportPhotos([p])
@@ -951,6 +970,7 @@ window.addEventListener('popstate', () => {
     els.askBackdrop.click()
   } else if (!els.viewer.hidden) {
     els.viewer.hidden = true
+    zoom.reset()
     els.track.innerHTML = ''
     if (!els.gallery.hidden) renderGallery()
   } else if (!els.gallery.hidden) {
