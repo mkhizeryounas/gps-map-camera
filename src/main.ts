@@ -229,7 +229,10 @@ function photoFrame() {
   return { sw, sh, top, w: sw, h: sh - top, controls }
 }
 
-/** When the phone is turned, the screen's top edge is one of the photo's sides: keep the stamp off the controls there. */
+/**
+ * When the phone is turned, the screen's top edge is one of the photo's sides: shift the
+ * preview stamp off the controls there. Saved photos keep the normal margins.
+ */
 function controlsInset(rot: number, zone: number): StampInset {
   if (rot === 90) return { left: zone }
   if (rot === 270) return { right: zone }
@@ -436,7 +439,8 @@ async function capture() {
       5000,
       state.map,
     )
-    drawStamp(ctx, W, H, data, map, icon(), controlsInset(rot, f.controls / scale))
+    // No control margin here: that's only to keep the on-screen preview readable.
+    drawStamp(ctx, W, H, data, map, icon())
 
     const id = crypto.randomUUID()
     const blob = withExif(canvas.toDataURL('image/jpeg', state.settings.quality), buildExif(data, W, H, id))
