@@ -82,17 +82,20 @@ export class GeoTracker {
   }
 
   /** Must be called from a user gesture on iOS (permission prompt). */
-  /** Returns whether orientation access is available (iOS asks for permission). */
-  async startCompass() {
+  /**
+   * Starts compass tracking. iOS asks for permission; 'denied' = the user said no,
+   * 'blocked' = iOS refused to ask because the call wasn't directly inside a tap.
+   */
+  async startCompass(): Promise<'granted' | 'denied' | 'blocked'> {
     const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }
     if (DOE?.requestPermission) {
       try {
-        if ((await DOE.requestPermission()) !== 'granted') return false
+        if ((await DOE.requestPermission()) !== 'granted') return 'denied'
       } catch {
-        return false
+        return 'blocked'
       }
     }
-    if (this.compassOn) return true
+    if (this.compassOn) return 'granted'
     this.compassOn = true
     const handler = (e: DeviceOrientationEvent) => {
       const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
@@ -104,7 +107,7 @@ export class GeoTracker {
     // Android exposes true-north heading via the "absolute" event; iOS via webkitCompassHeading.
     const event = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation'
     window.addEventListener(event as 'deviceorientation', handler)
-    return true
+    return 'granted'
   }
 
   private async refreshPlace() {

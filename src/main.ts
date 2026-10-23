@@ -124,6 +124,7 @@ async function startCamera() {
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})
     renderFlash()
+    if (state.flash) applyFlash() // re-light the torch after (re)opening the camera
   } catch (e) {
     const name = (e as DOMException).name
     toast(name === 'NotAllowedError' ? 'Camera permission denied — enable it in browser settings' : 'Could not open camera', 4000)
@@ -178,15 +179,34 @@ function renderFlash() {
   els.flashBtn.setAttribute('aria-label', state.flash ? 'Flash on' : 'Flash off')
 }
 
-function toggleFlash() {
-  state.flash = !state.flash
+function saveFlashPref() {
   try {
     localStorage.setItem('gps-map-camera:flash', state.flash ? 'on' : 'off')
   } catch {
     /* ignore */
   }
+}
+
+/**
+ * Flash on = the torch lights up now and stays on while the camera is open, so it's visibly
+ * working and the shot is lit. If the torch can't be controlled, say so straight away.
+ */
+let torchOn = false
+async function applyFlash() {
+  torchOn = state.flash ? await setTorch(true) : (await setTorch(false), false)
+  return torchOn
+}
+
+async function toggleFlash() {
+  state.flash = !state.flash
   renderFlash()
-  toast(state.flash ? 'Flash on' : 'Flash off', 1000)
+  const ok = await applyFlash()
+  if (state.flash && !ok && !('ImageCapture' in window)) {
+    state.flash = false
+    renderFlash()
+    toast('Flash isn’t available on this camera')
+  }
+  saveFlashPref()
 }
 
 function stopCamera() {
@@ -258,19 +278,20 @@ onRotation(applyRotation)
  */
 let motionReady = false
 let rotateHintShown = false
-let motionAsking: Promise<boolean> | null = null
-function startSensors(): Promise<boolean> {
-  if (motionReady) return Promise.resolve(true)
-  motionAsking ??= geo.startCompass().then((ok) => {
+let motionAsking: Promise<'granted' | 'denied' | 'blocked'> | null = null
+/** Must run as the first thing inside a tap on iOS, or the permission prompt is refused. */
+function startSensors(): Promise<'granted' | 'denied' | 'blocked'> {
+  if (motionReady) return Promise.resolve('granted')
+  motionAsking ??= geo.startCompass().then((res) => {
     motionAsking = null
-    motionReady = ok
-    if (ok) startOrientation()
-    els.motionBtn.hidden = ok || els.camera.hidden
+    motionReady = res === 'granted'
+    if (motionReady) startOrientation()
+    els.motionBtn.hidden = motionReady || els.camera.hidden
     if (!els.motionBtn.hidden && !rotateHintShown) {
       rotateHintShown = true
       toast('Tap the rotate icon to turn on auto-rotate', 3500)
     }
-    return ok
+    return res
   })
   return motionAsking
 }
@@ -338,7 +359,6 @@ const toBlob = (c: HTMLCanvasElement, q: number) =>
 
 async function capture() {
   if (state.capturing) return
-  startSensors()
   const rot = getRotation() // orientation at the moment of the tap
   const v = els.video
   if (!v.videoWidth) return toast('Camera not ready')
@@ -353,22 +373,17 @@ async function capture() {
   void els.flash.offsetWidth
   els.flash.classList.add('go')
 
-  // Flash: torch first (lets exposure settle before grabbing the frame), then the camera's
-  // own photo flash, and only if neither exists tell the user.
+  // Flash: the torch is already lit while flash is on; without a torch, fall back to the
+  // camera's own photo flash (Android Chrome).
   let source: CanvasImageSource = v
   let vw = v.videoWidth
   let vh = v.videoHeight
-  let flashed = false
-  if (state.flash) {
-    flashed = await setTorch(true)
-    if (flashed) await new Promise((r) => setTimeout(r, 600))
-    else {
-      const shot = await flashPhoto()
-      if (shot) {
-        source = shot
-        vw = shot.width
-        vh = shot.height
-      } else toast('This browser can’t fire the flash')
+  if (state.flash && !torchOn) {
+    const shot = await flashPhoto()
+    if (shot) {
+      source = shot
+      vw = shot.width
+      vh = shot.height
     }
   }
 
@@ -386,7 +401,6 @@ async function capture() {
     ctx.rotate((-rot * Math.PI) / 180)
     ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh)
     ctx.restore()
-    if (flashed) setTorch(false)
 
     const date = new Date()
     const data = stampData(date)
@@ -429,7 +443,6 @@ async function capture() {
     console.error(e)
     toast('Could not save photo')
   } finally {
-    if (flashed) setTorch(false)
     state.capturing = false
     els.shutter.classList.remove('busy')
   }
@@ -823,12 +836,14 @@ async function launch() {
 }
 
 els.start.onclick = async () => {
+  const motion = startSensors() // must be the very first call inside the tap for iOS to show the prompt
   unlockAudio()
-  await startSensors() // must be the first call inside the tap for iOS to show the prompt
+  await motion
   launch()
 }
 els.motionBtn.onclick = async () => {
-  if (!(await startSensors())) toast('Motion access is off. Turn it on in Settings → Apps → Safari → Motion & Orientation Access', 5000)
+  // Only explain settings if the user actually said no; a 'blocked' attempt just stays retryable.
+  if ((await startSensors()) === 'denied') toast('Auto-rotate was declined. Close and reopen the app to be asked again.', 4000)
 }
 // The tap lands on the label, which toggles the hidden switch: one 'change' per tap.
 els.shutterSwitch.addEventListener('change', () => {
