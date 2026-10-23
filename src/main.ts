@@ -124,7 +124,6 @@ async function startCamera() {
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})
     renderFlash()
-    if (state.flash) applyFlash() // re-light the torch after (re)opening the camera
   } catch (e) {
     const name = (e as DOMException).name
     toast(name === 'NotAllowedError' ? 'Camera permission denied — enable it in browser settings' : 'Could not open camera', 4000)
@@ -187,26 +186,22 @@ function saveFlashPref() {
   }
 }
 
-/**
- * Flash on = the torch lights up now and stays on while the camera is open, so it's visibly
- * working and the shot is lit. If the torch can't be controlled, say so straight away.
- */
-let torchOn = false
-async function applyFlash() {
-  torchOn = state.flash ? await setTorch(true) : (await setTorch(false), false)
-  return torchOn
-}
-
-async function toggleFlash() {
+function toggleFlash() {
   state.flash = !state.flash
   renderFlash()
-  const ok = await applyFlash()
-  if (state.flash && !ok && !('ImageCapture' in window)) {
-    state.flash = false
-    renderFlash()
-    toast('Flash isn’t available on this camera')
-  }
   saveFlashPref()
+  toast(state.flash ? 'Flash on' : 'Flash off', 1000)
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** Resolves on the next decoded video frame (so we never grab a frame from before the torch lit). */
+function nextFrame(v: HTMLVideoElement) {
+  return new Promise<void>((resolve) => {
+    const rvfc = (v as HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number }).requestVideoFrameCallback
+    if (rvfc) rvfc.call(v, () => resolve())
+    else requestAnimationFrame(() => resolve())
+  })
 }
 
 function stopCamera() {
@@ -373,17 +368,25 @@ async function capture() {
   void els.flash.offsetWidth
   els.flash.classList.add('go')
 
-  // Flash: the torch is already lit while flash is on; without a torch, fall back to the
-  // camera's own photo flash (Android Chrome).
+  // Flash fires only for the shot: torch on, give the LED and auto-exposure ~1s to settle,
+  // grab a fresh frame, torch off. Without a torch, use the camera's own photo flash (Android).
   let source: CanvasImageSource = v
   let vw = v.videoWidth
   let vh = v.videoHeight
-  if (state.flash && !torchOn) {
-    const shot = await flashPhoto()
-    if (shot) {
-      source = shot
-      vw = shot.width
-      vh = shot.height
+  let torchOn = false
+  if (state.flash) {
+    torchOn = await setTorch(true)
+    if (torchOn) {
+      toast('Hold still…', 1200)
+      await sleep(1000)
+      await nextFrame(v)
+    } else {
+      const shot = await flashPhoto()
+      if (shot) {
+        source = shot
+        vw = shot.width
+        vh = shot.height
+      } else toast('Flash isn’t available on this camera')
     }
   }
 
@@ -401,6 +404,7 @@ async function capture() {
     ctx.rotate((-rot * Math.PI) / 180)
     ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh)
     ctx.restore()
+    if (torchOn) setTorch(false)
 
     const date = new Date()
     const data = stampData(date)
@@ -443,6 +447,7 @@ async function capture() {
     console.error(e)
     toast('Could not save photo')
   } finally {
+    if (torchOn) setTorch(false)
     state.capturing = false
     els.shutter.classList.remove('busy')
   }
