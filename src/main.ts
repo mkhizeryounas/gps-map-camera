@@ -420,6 +420,8 @@ interface AskAction {
   id: string
   label: string
   style: 'primary' | 'danger' | 'glass'
+  /** Runs synchronously inside the tap (for APIs that need a user gesture, like iOS motion). */
+  onTap?: () => void
 }
 
 function ask(title: string, text: string, actions: AskAction[]): Promise<string | null> {
@@ -437,7 +439,10 @@ function ask(title: string, text: string, actions: AskAction[]): Promise<string 
       b.className = `btn ${a.style}`
       if (a.style === 'danger') b.dataset.haptic = 'warning'
       b.textContent = a.label
-      b.onclick = () => done(a.id)
+      b.onclick = () => {
+        a.onTap?.()
+        done(a.id)
+      }
       els.askActions.append(b)
     }
     els.askBackdrop.onclick = () => done(null)
@@ -791,9 +796,20 @@ async function launch() {
   }
   await startCamera()
   await geo.start()
-  // Returning users skip the Start tap; works silently if motion was allowed before,
-  // otherwise shows the "Enable auto-rotate" button.
-  await startSensors()
+  // Returning users skip the Start tap: motion starts silently if it was allowed before;
+  // otherwise ask straight away (iOS needs a tap, so it's a one-button sheet).
+  if (!(await startSensors())) await askForMotion()
+}
+
+async function askForMotion() {
+  let request: Promise<boolean> = Promise.resolve(false)
+  const choice = await ask('Allow auto-rotate', 'Photos and the stamp turn with your phone when you hold it sideways.', [
+    { id: 'allow', label: 'Allow', style: 'primary', onTap: () => (request = startSensors()) },
+    { id: 'later', label: 'Not now', style: 'glass' },
+  ])
+  if (choice === 'allow' && !(await request)) {
+    toast('Motion access is off. Turn it on in Settings → Apps → Safari → Motion & Orientation Access', 5000)
+  }
 }
 
 els.start.onclick = async () => {
