@@ -23,6 +23,7 @@ export class GeoTracker {
   place: Place | null = null
   heading: number | null = null
   error: string | null = null
+  private compassOn = false
 
   private listeners = new Set<Listener>()
   private watchId: number | null = null
@@ -38,14 +39,19 @@ export class GeoTracker {
     this.listeners.forEach((fn) => fn())
   }
 
-  start() {
+  /** Starts tracking; resolves once the location prompt has been answered (first fix or error). */
+  start(): Promise<void> {
     if (!('geolocation' in navigator)) {
       this.error = 'GPS not supported on this device'
       this.emit()
-      return
+      return Promise.resolve()
     }
+    if (this.watchId != null) return Promise.resolve()
+    let answered: () => void = () => {}
+    const ready = new Promise<void>((r) => (answered = r))
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        answered()
         const c = pos.coords
         this.fix = {
           lat: c.latitude,
@@ -60,11 +66,14 @@ export class GeoTracker {
         this.refreshPlace()
       },
       (err) => {
+        answered()
         this.error = err.code === err.PERMISSION_DENIED ? 'Location permission denied' : 'Searching for GPS…'
         this.emit()
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
     )
+    // Don't hold up the launch sequence forever if the first fix is slow.
+    return Promise.race([ready, new Promise<void>((r) => setTimeout(r, 8000))])
   }
 
   stop() {
@@ -83,6 +92,8 @@ export class GeoTracker {
         return false
       }
     }
+    if (this.compassOn) return true
+    this.compassOn = true
     const handler = (e: DeviceOrientationEvent) => {
       const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
       let h: number | null = null

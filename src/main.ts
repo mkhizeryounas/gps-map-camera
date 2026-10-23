@@ -29,6 +29,7 @@ const els = {
   flashBtn: $<HTMLButtonElement>('flashBtn'),
   shutter: $<HTMLLabelElement>('shutter'),
   shutterSwitch: $<HTMLInputElement>('shutterSwitch'),
+  motionBtn: $<HTMLButtonElement>('motionBtn'),
   thumbBtn: $<HTMLButtonElement>('thumbBtn'),
   thumbImg: $<HTMLImageElement>('thumbImg'),
   countBadge: $('countBadge'),
@@ -80,7 +81,6 @@ const state = {
   selected: new Set<string>(),
   viewIndex: 0,
   capturing: false,
-  compassAsked: false,
   flash: readFlashPref(),
 }
 
@@ -123,6 +123,7 @@ async function startCamera() {
     })
     els.video.srcObject = state.stream
     await els.video.play().catch(() => {})
+    recheckTorchSoon()
     renderFlash()
   } catch (e) {
     const name = (e as DOMException).name
@@ -150,17 +151,30 @@ async function setTorch(on: boolean) {
   return false
 }
 
-/** The flash button only appears when the camera exposes a torch (e.g. Android Chrome; not iPhone Safari). */
+/**
+ * Cameras report torch support a moment after they start, so the button stays visible while
+ * starting up and is only hidden if the camera still has no torch a few seconds later.
+ */
+let torchChecked = false
+let torchTimer = 0
+function recheckTorchSoon() {
+  torchChecked = false
+  clearTimeout(torchTimer)
+  torchTimer = window.setTimeout(() => {
+    torchChecked = true
+    renderFlash()
+  }, 3000)
+}
+
 function renderFlash() {
-  const supported = torchSupported()
-  els.flashBtn.style.visibility = supported ? 'visible' : 'hidden'
-  els.flashBtn.disabled = !supported
-  els.flashBtn.setAttribute('aria-pressed', String(supported && state.flash))
+  const show = torchSupported() || !torchChecked
+  els.flashBtn.style.visibility = show ? 'visible' : 'hidden'
+  els.flashBtn.setAttribute('aria-pressed', String(state.flash))
   els.flashBtn.setAttribute('aria-label', state.flash ? 'Flash on' : 'Flash off')
 }
 
 function toggleFlash() {
-  if (!torchSupported()) return
+  if (!torchSupported()) return toast('Flash is getting ready — try again in a moment')
   state.flash = !state.flash
   try {
     localStorage.setItem('gps-map-camera:flash', state.flash ? 'on' : 'off')
@@ -233,16 +247,23 @@ function applyRotation(rot: number) {
 }
 onRotation(applyRotation)
 
-/** Ask for motion access (iOS) inside a user gesture, then track compass + orientation. */
-function startSensors() {
-  if (state.compassAsked) return
-  state.compassAsked = true
-  geo.startCompass().then((ok) => {
-    if (ok) return startOrientation()
-    // Prompt dismissed or not inside a tap: try again on the next one.
-    state.compassAsked = false
-    document.addEventListener('click', startSensors, { once: true, capture: true })
+/**
+ * Motion access (compass + auto-rotate). iOS only shows its prompt from inside a real tap,
+ * so this is called synchronously from the Start / "Enable auto-rotate" / shutter taps.
+ * Outside a tap it still succeeds when access was granted before.
+ */
+let motionReady = false
+let motionAsking: Promise<boolean> | null = null
+function startSensors(): Promise<boolean> {
+  if (motionReady) return Promise.resolve(true)
+  motionAsking ??= geo.startCompass().then((ok) => {
+    motionAsking = null
+    motionReady = ok
+    if (ok) startOrientation()
+    els.motionBtn.hidden = ok || els.camera.hidden
+    return ok
   })
+  return motionAsking
 }
 
 let rafPending = false
@@ -758,6 +779,7 @@ async function startDemo() {
 
 // ---------------------------------------------------------------------------
 // Wiring
+/** Opens the camera, asking for permissions one after another: (motion) → camera → location. */
 async function launch() {
   clearInterval(demoTimer)
   els.welcome.hidden = true
@@ -767,18 +789,20 @@ async function launch() {
   } catch {
     /* ignore */
   }
-  // Motion sensors: Android needs no permission; iOS must ask inside a tap, so use the first one.
-  const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: unknown } | undefined
-  if (DOE && !DOE.requestPermission) startSensors()
-  else document.addEventListener('click', startSensors, { once: true, capture: true })
-  geo.start()
   await startCamera()
+  await geo.start()
+  // Returning users skip the Start tap; works silently if motion was allowed before,
+  // otherwise shows the "Enable auto-rotate" button.
+  await startSensors()
 }
 
-els.start.onclick = () => {
+els.start.onclick = async () => {
   unlockAudio()
-  startSensors()
+  await startSensors() // must be the first call inside the tap for iOS to show the prompt
   launch()
+}
+els.motionBtn.onclick = async () => {
+  if (!(await startSensors())) toast('Motion access is off. Turn it on in Settings → Apps → Safari → Motion & Orientation Access', 5000)
 }
 // The tap lands on the label, which toggles the hidden switch: one 'change' per tap.
 els.shutterSwitch.addEventListener('change', () => {
@@ -858,6 +882,7 @@ els.install.onclick = async () => {
 }
 if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) els.iosHint.hidden = false
 
+els.video.addEventListener('playing', renderFlash)
 els.video.addEventListener('loadedmetadata', () => {
   renderFlash() // some Android cameras only report torch support once frames arrive
   scheduleDraw()
