@@ -220,14 +220,14 @@ function layoutOverlay() {
   const vw = v.videoWidth
   const vh = v.videoHeight
   if (!vw || !vh) return null
-  const sw = els.stage.clientWidth
-  const sh = els.stage.clientHeight
-  const scale = Math.min(sw / vw, sh / vh)
-  const w = vw * scale
-  const h = vh * scale
+  // The viewfinder fills the whole stage (object-fit: cover) and captures are cropped the
+  // same way, so the stamp preview covers the stage exactly.
+  const w = els.stage.clientWidth
+  const h = els.stage.clientHeight
+  if (!w || !h) return null
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const c = els.overlay
-  Object.assign(c.style, { left: `${(sw - w) / 2}px`, top: `${(sh - h) / 2}px`, width: `${w}px`, height: `${h}px` })
+  Object.assign(c.style, { left: '0px', top: '0px', width: `${w}px`, height: `${h}px` })
   const pw = Math.round(w * dpr)
   const ph = Math.round(h * dpr)
   if (c.width !== pw || c.height !== ph) {
@@ -392,10 +392,18 @@ async function capture() {
   }
 
   try {
-    // Rotate the frame so the saved photo is upright however the phone was held.
+    // Crop to exactly what the viewfinder shows (cover, centred)…
+    const stageAR = els.stage.clientWidth / els.stage.clientHeight || vw / vh
+    let cw = vw
+    let ch = vh
+    if (vw / vh > stageAR) cw = Math.round(vh * stageAR)
+    else ch = Math.round(vw / stageAR)
+    const sx = (vw - cw) / 2
+    const sy = (vh - ch) / 2
+    // …and rotate so the saved photo is upright however the phone was held.
     const swap = rot % 180 !== 0
-    const W = swap ? vh : vw
-    const H = swap ? vw : vh
+    const W = swap ? ch : cw
+    const H = swap ? cw : ch
     const canvas = document.createElement('canvas')
     canvas.width = W
     canvas.height = H
@@ -403,7 +411,7 @@ async function capture() {
     ctx.save()
     ctx.translate(W / 2, H / 2)
     ctx.rotate((-rot * Math.PI) / 180)
-    ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh)
+    ctx.drawImage(source, sx, sy, cw, ch, -cw / 2, -ch / 2, cw, ch)
     ctx.restore()
     if (torchOn) setTorch(false)
 
@@ -944,15 +952,9 @@ function fitAppHeight() {
 fitAppHeight()
 window.addEventListener('resize', fitAppHeight)
 
-// Size the viewfinder to the camera's exact shape (changes when iOS rotates the stream).
-const fitStage = () => {
-  const v = els.video
-  if (v.videoWidth && v.videoHeight) els.camera.style.setProperty('--ar', `${v.videoWidth} / ${v.videoHeight}`)
-  scheduleDraw()
-}
-els.video.addEventListener('resize', fitStage)
+els.video.addEventListener('resize', scheduleDraw)
 els.video.addEventListener('loadedmetadata', () => {
-  fitStage()
+  scheduleDraw()
   renderFlash() // some Android cameras only report torch support once frames arrive
   scheduleDraw()
 })
