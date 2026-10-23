@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta name="description" content="GPS-stamped, geo-tagged photos of business premises, machinery and utility meters for FBR sales tax registration." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GPS Map Camera" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <title>GPS Map Camera</title>
+  </head>
+  <body>
+    <!-- Welcome -------------------------------------------------------------->
+    <section id="welcome" class="screen welcome">
+      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="welcome-inner">
+        <div class="brand">
+          <img src="/pwa-192x192.png" alt="" />
+          <span>GPS Map Camera</span>
+          <em class="tag">FBR · IRIS</em>
+        </div>
+
+        <h1>Geo-tagged photos,<br /><span class="grad">accepted first time.</span></h1>
+        <p class="lede">Stamp every shot with a satellite map, address, coordinates and time — in the exact format FBR approves for sales tax registration.</p>
+
+        <figure class="demo">
+          <canvas id="demo" width="960" height="1080" aria-label="Example stamped photo"></canvas>
+          <figcaption><span class="live-dot"></span>Sample stamp</figcaption>
+        </figure>
+
+        <ul class="req">
+          <li>
+            <span class="ico g"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>
+            <div><b>Business premises</b><small>Exterior with signboard &amp; interior</small></div>
+          </li>
+          <li>
+            <span class="ico b"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.2 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></span>
+            <div><b>Machinery</b><small>Required for manufacturers</small></div>
+          </li>
+          <li>
+            <span class="ico y"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span>
+            <div><b>Electricity &amp; gas meters</b><small>Industrial meters, reference no. visible</small></div>
+          </li>
+        </ul>
+
+        <div class="cta">
+          <button id="start" class="btn primary big">
+            Open camera
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <button id="install" class="btn glass big" hidden>
+            <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            Install app
+          </button>
+          <p class="ios-hint" id="iosHint" hidden>
+            Install: tap <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> Share → <b>Add to Home Screen</b>
+          </p>
+          <p class="fine">Photos stay on your device. Camera &amp; location access required.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Camera --------------------------------------------------------------->
+    <section id="camera" class="screen camera" hidden>
+      <header class="topbar">
+        <button class="flash-btn" id="flashBtn" aria-label="Flash off" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/><path class="slash" d="M3 3l18 18"/></svg>
+        </button>
+        <div class="gps-pill" id="gpsPill"><i></i><span>Locating…</span></div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </button>
+      </header>
+
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="overlay"></canvas>
+        <div class="flash" id="flash"></div>
+      </div>
+
+      <footer class="controls">
+        <button class="thumb" id="thumbBtn" aria-label="Open photos"><img id="thumbImg" alt="" hidden /><b id="countBadge" hidden></b></button>
+        <button class="shutter" id="shutter" aria-label="Take photo"><span></span></button>
+        <button class="export-btn" id="exportBtn" aria-label="Export all photos">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+          <span>Export</span>
+        </button>
+      </footer>
+    </section>
+
+    <!-- Photos ---------------------------------------------------------------->
+    <section id="gallery" class="screen panel" hidden>
+      <header class="panel-head">
+        <button class="icon-btn" data-close aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <h2>Photos</h2>
+        <span></span>
+      </header>
+      <div class="panel-body">
+        <div class="grid" id="grid"></div>
+        <p class="empty" id="empty">No photos yet.</p>
+      </div>
+      <div class="panel-foot" id="galleryFoot">
+        <button class="btn primary big" id="shareAll">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+          <span id="shareAllLabel">Export all</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Viewer --------------------------------------------------------------->
+    <section id="viewer" class="screen viewer" hidden>
+      <header class="panel-head overlay-head">
+        <button class="icon-btn" data-close aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <h2 id="viewerTitle"></h2>
+        <span></span>
+      </header>
+      <div class="viewer-img"><img id="viewerImg" alt="" /></div>
+      <div class="viewer-actions">
+        <button class="act danger" id="vDelete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></svg>Delete</button>
+        <button class="btn primary act-main" id="vShare"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Export</button>
+        <button class="act" id="vMaps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Map</button>
+      </div>
+    </section>
+
+    <!-- Settings sheet ------------------------------------------------------->
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+    <section id="settings" class="sheet" hidden>
+      <div class="grabber"></div>
+      <h2>Stamp details</h2>
+      <form id="settingsForm" autocomplete="off">
+        <label>Business name<input name="businessName" placeholder="e.g. Khan Traders" maxlength="60" /></label>
+        <label>NTN / CNIC<input name="ntn" placeholder="e.g. 1234567-8" maxlength="20" inputmode="numeric" /></label>
+        <label>Note<input name="note" placeholder="Captured by GPS Map Camera" maxlength="80" /></label>
+        <div class="seg-label">Map</div>
+        <div class="seg">
+          <label><input type="radio" name="mapStyle" value="satellite" /><span>Satellite</span></label>
+          <label><input type="radio" name="mapStyle" value="street" /><span>Street</span></label>
+        </div>
+        <p class="sheet-note">Business name and NTN are written into the photo's EXIF metadata. The visible stamp matches the format FBR has accepted.</p>
+        <button type="submit" class="btn primary">Done</button>
+      </form>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
