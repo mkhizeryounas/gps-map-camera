@@ -239,13 +239,13 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, maxLines
 
 function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: StampData, map: MapImage | null, icon: CanvasImageSource | null | undefined, inset: StampInset) {
   const u = Math.min(W, H) / MREF
-  const side = 18 * u + (inset.left ?? 0)
+  const side = 10 * u + (inset.left ?? 0)
   const bottom = 65 * u + (inset.bottom ?? 0)
   const panelH = 230 * u
   const top = H - bottom - panelH
   const mapW = 268 * u
   const cardX = side + mapW + 14 * u
-  const cardR = W - 18 * u - (inset.right ?? 0)
+  const cardR = W - 12 * u - (inset.right ?? 0)
   const cardW = cardR - cardX
   const pad = 12 * u // map panel text inset
 
