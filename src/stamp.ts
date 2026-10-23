@@ -240,7 +240,7 @@ function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: Stam
   const u = Math.min(W, H) / MREF
   const side = 10 * u
   const bottom = 65 * u
-  const panelH = 228 * u
+  const panelH = 230 * u
   const top = H - bottom - panelH
   const mapW = 268 * u
   const cardX = side + mapW + 14 * u
@@ -276,8 +276,8 @@ function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: Stam
   ctx.fillRect(side, top + panelH - stripH * 1.3, mapW, stripH * 1.3)
   ctx.fillStyle = '#fff'
   if (d.fix) {
-    fitText(ctx, `Lat ${d.fix.lat.toFixed(6)}°`, side + pad, top + panelH - 38 * u, mapW - pad * 2, 500, 21 * u)
-    fitText(ctx, `Long ${d.fix.lon.toFixed(6)}°`, side + pad, top + panelH - 11 * u, mapW - pad * 2, 500, 21 * u)
+    fitText(ctx, `Lat ${d.fix.lat.toFixed(6)}°`, side + pad, top + panelH - 42 * u, mapW - pad * 2, 500, 26 * u)
+    fitText(ctx, `Long ${d.fix.lon.toFixed(6)}°`, side + pad, top + panelH - 12 * u, mapW - pad * 2, 500, 26 * u)
   } else {
     fitText(ctx, 'Locating…', side + pad, top + panelH - 20 * u, mapW - pad * 2, 500, 21 * u)
   }
@@ -299,28 +299,29 @@ function drawModern(ctx: CanvasRenderingContext2D, W: number, H: number, d: Stam
   const date = d.date
   const dateLine = `${date.getDate()} ${date.toLocaleDateString('en-GB', { month: 'short' })}, ${date.getFullYear()}`
   const timeLine = `${date.toLocaleDateString('en-GB', { weekday: 'short' })}, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-  const tx = cardX + 16 * u
-  const max = cardW - 32 * u
+  // Sizes and baselines measured from the reference photo (880 px wide).
+  const tx = cardX + 14 * u
+  const max = cardW - 28 * u
 
   ctx.fillStyle = '#fff'
-  fitText(ctx, dateLine, tx, top + 36 * u, max, 600, 25 * u)
-  ctx.fillStyle = 'rgba(255,255,255,0.82)'
-  fitText(ctx, timeLine, tx, top + 62 * u, max, 400, 18 * u)
+  fitText(ctx, dateLine, tx, top + 36 * u, max, 500, 30 * u)
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'
+  fitText(ctx, timeLine, tx, top + 66 * u, max, 400, 24 * u)
 
   ctx.fillStyle = AMBER
   const title = d.place ? d.place.title : d.fix ? 'Fetching address…' : 'Waiting for GPS…'
-  fitText(ctx, title, tx, top + 108 * u, max, 700, 32 * u)
+  fitText(ctx, title, tx, top + 116 * u, max, 700, 42 * u)
 
   ctx.fillStyle = '#fff'
-  ctx.font = font(400, 19 * u)
+  ctx.font = font(400, 28 * u)
   const addr = d.place?.address ? wrap(ctx, d.place.address, max, 2) : []
-  addr.forEach((l, i) => ctx.fillText(l, tx, top + (140 + i * 26) * u))
+  addr.forEach((l, i) => ctx.fillText(l, tx, top + (153 + i * 32) * u))
 
   const note = d.settings.note.trim()
   if (note) {
     ctx.fillStyle = 'rgba(255,255,255,0.92)'
     ctx.textAlign = 'right'
-    fitText(ctx, note, cardR - 16 * u, top + panelH - 15 * u, max, 500, 18 * u)
+    fitText(ctx, note, cardR - 14 * u, top + panelH - 12 * u, max, 500, 26 * u)
     ctx.textAlign = 'left'
   }
 
