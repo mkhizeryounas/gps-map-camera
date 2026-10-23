@@ -268,28 +268,25 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* ---------- portrait camera: full-bleed viewfinder under a progressive blur ---------- */
+/* iOS installed apps (black-translucent status bar) size fixed screens one status-bar short,
+   leaving a gap at the bottom; 100vh is the true full height there. */
+@media (display-mode: standalone) {
+  .screen { bottom: auto; height: 100vh; }
+}
+
+/* ---------- portrait camera: compact top bar, picture right below, shutter centred under it ---------- */
 @media not all and (orientation: landscape) and (max-height: 560px) {
   .camera { display: block; }
   .camera .topbar {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 4; isolation: isolate;
-    background: transparent; padding: calc(8px + var(--safe-t)) 14px 10px;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 4;
+    height: calc(52px + var(--safe-t)); padding: calc(6px + var(--safe-t)) 14px 6px;
   }
-  /* Blur that fades out downwards; kept on a pseudo-element so the buttons aren't masked. */
-  .camera .topbar::before {
-    content: ""; position: absolute; inset: 0 0 -28px 0; z-index: -1; pointer-events: none;
-    background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.2) 70%, transparent);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    mask-image: linear-gradient(#000 45%, transparent); -webkit-mask-image: linear-gradient(#000 45%, transparent);
-  }
-  /* Viewfinder starts right under the status bar; controls get at least 120px below it. */
-  .stage { position: absolute; top: var(--safe-t); left: 0; right: 0; bottom: calc(120px + var(--safe-b)); }
+  .stage { position: absolute; top: calc(52px + var(--safe-t)); left: 0; right: 0; bottom: calc(120px + var(--safe-b)); }
   .stage video { object-position: center top; }
-  /* Controls sit centred between the bottom of the picture (--vb, set in JS) and the screen edge. */
+  /* --vb (set in JS) is the bottom edge of the picture. */
   .controls {
     position: absolute; left: 0; right: 0; bottom: 0; top: var(--vb, auto);
-    min-height: calc(120px + var(--safe-b)); background: transparent;
-    padding: 12px 28px var(--safe-b); align-content: center;
+    min-height: calc(120px + var(--safe-b)); padding: 8px 28px var(--safe-b); align-content: center;
   }
 }
 
