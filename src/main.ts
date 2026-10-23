@@ -6,6 +6,7 @@ import { distance, GeoTracker } from './geo'
 import { renderMap, type MapImage } from './map'
 import { haptic, installButtonHaptics } from './haptics'
 import { paintStorefront } from './demo'
+import { playShutter, unlockAudio } from './sound'
 import { drawStamp } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
 import type { PhotoRecord, Settings, StampData } from './types'
@@ -275,6 +276,8 @@ async function capture() {
   if (!fix) return toast('Waiting for GPS — step outside or near a window')
 
   state.capturing = true
+  // Sound must start synchronously inside the tap for iOS to allow it.
+  if (state.settings.shutterSound) playShutter()
   els.shutter.classList.add('busy')
   els.flash.classList.remove('go')
   void els.flash.offsetWidth
@@ -634,6 +637,7 @@ function openSettings() {
   ;(f.elements.namedItem('businessName') as HTMLInputElement).value = s.businessName
   ;(f.elements.namedItem('ntn') as HTMLInputElement).value = s.ntn
   ;(f.elements.namedItem('note') as HTMLInputElement).value = s.note
+  ;(f.elements.namedItem('shutterSound') as HTMLInputElement).checked = s.shutterSound
   f.querySelectorAll<HTMLInputElement>('input[name=mapStyle]').forEach((r) => (r.checked = r.value === s.mapStyle))
   els.sheetBackdrop.hidden = false
   els.settings.hidden = false
@@ -648,6 +652,7 @@ function closeSettings() {
     ntn: String(f.get('ntn') ?? '').trim(),
     note: String(f.get('note') ?? '').trim(),
     mapStyle: f.get('mapStyle') === 'street' ? 'street' : 'satellite',
+    shutterSound: f.get('shutterSound') === 'on',
   }
   saveSettings(state.settings)
   els.sheetBackdrop.hidden = true
@@ -712,11 +717,14 @@ async function launch() {
 }
 
 els.start.onclick = () => {
+  unlockAudio()
   state.compassAsked = true
   geo.startCompass()
   launch()
 }
 els.shutter.onclick = capture
+// Warm up audio as the finger lands so the shutter sound has no start-up lag.
+els.shutter.addEventListener('pointerdown', unlockAudio)
 els.flashBtn.onclick = toggleFlash
 renderFlash()
 els.thumbBtn.onclick = openGallery

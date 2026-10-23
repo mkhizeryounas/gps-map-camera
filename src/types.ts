@@ -21,6 +21,7 @@ export interface Settings {
   note: string
   mapStyle: MapStyle
   quality: number
+  shutterSound: boolean
 }
 
 export interface StampData {

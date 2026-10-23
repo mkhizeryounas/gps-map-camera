@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   note: 'Captured by GPS Map Camera',
   mapStyle: 'satellite',
   quality: 0.92,
+  shutterSound: true,
 }
 
 export function loadSettings(): Settings {
