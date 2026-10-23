@@ -28,7 +28,6 @@
           <li><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Photos stay on your phone until you export</li>
         </ul>
         <button id="start" class="btn primary big">Start</button>
-        <button id="openPhotos" class="btn glass big" hidden>View photos</button>
         <button id="install" class="btn glass big" hidden>Install app</button>
         <p class="ios-hint" id="iosHint" hidden>Install: tap <svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> then <b>Add to Home Screen</b></p>
       </div>
@@ -37,18 +36,13 @@
     <!-- Camera --------------------------------------------------------------->
     <section id="camera" class="screen camera" hidden>
       <header class="topbar">
-        <button class="icon-btn" id="closeBtn" aria-label="Close camera">
-          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <button class="flash-btn" id="flashBtn" aria-label="Flash off" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/><path class="slash" d="M3 3l18 18"/></svg>
         </button>
         <div class="gps-pill" id="gpsPill"><i></i><span>Locating…</span></div>
-        <div class="top-actions">
-          <button class="flash-btn" id="flashBtn" aria-label="Flash off" aria-pressed="false">
-            <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/><path class="slash" d="M3 3l18 18"/></svg>
-          </button>
-          <button class="icon-btn" id="settingsBtn" aria-label="Settings">
-            <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-          </button>
-        </div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </button>
       </header>
 
       <div class="stage" id="stage">

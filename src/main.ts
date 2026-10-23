@@ -16,8 +16,6 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const els = {
   welcome: $('welcome'),
   start: $<HTMLButtonElement>('start'),
-  openPhotos: $<HTMLButtonElement>('openPhotos'),
-  closeBtn: $<HTMLButtonElement>('closeBtn'),
   install: $<HTMLButtonElement>('install'),
   iosHint: $('iosHint'),
   demo: $<HTMLCanvasElement>('demo'),
@@ -508,8 +506,6 @@ function updateThumb(pop = false) {
   els.countBadge.hidden = !n
   els.countBadge.textContent = String(n)
   els.exportBtn.disabled = !n
-  els.openPhotos.hidden = !n
-  els.openPhotos.textContent = n === 1 ? 'View 1 photo' : `View ${n} photos`
   if (pop) {
     els.thumbBtn.classList.remove('pop')
     void els.thumbBtn.offsetWidth
@@ -693,7 +689,6 @@ function paintStorefront(ctx: CanvasRenderingContext2D, W: number, H: number) {
 
 let demoTimer = 0
 async function startDemo() {
-  clearInterval(demoTimer)
   const c = els.demo
   const ctx = c.getContext('2d')
   if (!ctx) return
@@ -744,22 +739,6 @@ async function launch() {
   await startCamera()
 }
 
-/** Back to the landing screen; releases the camera and GPS to save battery. */
-function closeCamera() {
-  stopCamera()
-  geo.stop()
-  els.camera.hidden = true
-  els.welcome.hidden = false
-  try {
-    localStorage.removeItem('gps-map-camera:started')
-  } catch {
-    /* ignore */
-  }
-  startDemo()
-}
-
-els.closeBtn.onclick = closeCamera
-els.openPhotos.onclick = openGallery
 els.start.onclick = () => {
   state.compassAsked = true
   geo.startCompass()

@@ -77,12 +77,10 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 /* ---------- camera ---------- */
 .camera { background: #000; touch-action: manipulation; }
 .topbar {
-  flex: none; display: grid; grid-template-columns: 88px 1fr 88px; align-items: center;
+  flex: none; display: grid; grid-template-columns: 40px 1fr 40px; justify-items: center; align-items: center;
   padding: calc(8px + var(--safe-t)) 14px 8px; background: #000;
 }
 .topbar .icon-btn { width: 40px; height: 40px; background: rgba(255,255,255,.1); }
-.topbar .gps-pill { justify-self: center; }
-.top-actions { display: flex; gap: 8px; justify-self: end; }
 .topbar .icon-btn svg { width: 20px; height: 20px; }
 .flash-btn {
   width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
