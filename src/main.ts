@@ -11,8 +11,6 @@ import { drawStamp } from './stamp'
 import { deletePhoto, listPhotos, loadSettings, savePhoto, saveSettings } from './store'
 import type { PhotoRecord, Settings, StampData } from './types'
 
-registerSW({ immediate: true })
-
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T
 
 const els = {
@@ -822,4 +820,39 @@ document.addEventListener('visibilitychange', () => {
   else startDemo()
   state.photos = await listPhotos().catch(() => [])
   updateThumb()
+  if (sessionStorage.getItem('gps-map-camera:updated')) {
+    sessionStorage.removeItem('gps-map-camera:updated')
+    toast('Updated to the latest version')
+  }
 })()
+
+// ---------------------------------------------------------------------------
+// Auto-update: check for a new build whenever the app is foregrounded, every 30 min
+// and on reconnect; apply it automatically at a moment that won't interrupt the user.
+const busy = () => state.capturing || !els.settings.hidden || !els.ask.hidden
+
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    const apply = () => {
+      if (busy()) return void setTimeout(apply, 1500)
+      commitPending()
+      try {
+        sessionStorage.setItem('gps-map-camera:updated', '1')
+      } catch {
+        /* ignore */
+      }
+      updateSW(true) // activates the waiting service worker and reloads
+    }
+    apply()
+  },
+  onRegisteredSW(_url, reg) {
+    if (!reg) return
+    const check = () => {
+      if (navigator.onLine) reg.update().catch(() => {})
+    }
+    setInterval(check, 30 * 60 * 1000)
+    document.addEventListener('visibilitychange', () => !document.hidden && check())
+    window.addEventListener('online', check)
+  },
+})

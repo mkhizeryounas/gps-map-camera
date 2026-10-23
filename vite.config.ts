@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [
     basicSsl(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' lets the app choose a safe moment to activate a new version (see src/main.ts).
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'GPS Map Camera — FBR Premises Photos',

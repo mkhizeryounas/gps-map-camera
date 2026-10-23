@@ -24,3 +24,9 @@ Camera and GPS require HTTPS. The dev server uses a self-signed certificate, so 
 
 Restrict the Google key by HTTP referrer in Google Cloud Console. It ships in the client bundle.
 Without a key, the app falls back to Esri/CARTO map tiles and OpenStreetMap Nominatim for addresses.
+
+## Updates
+
+The installed app updates itself. It checks for a new build when it comes to the foreground, every 30 minutes while open, and when the phone reconnects. A new version is applied automatically when the user isn't mid-capture or in a dialog, and the app shows "Updated to the latest version" afterwards.
+
+When hosting, serve `sw.js` (and `index.html`) with `Cache-Control: no-cache` so phones can see new versions. Hashed files under `assets/` can be cached forever.
