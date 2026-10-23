@@ -8,22 +8,20 @@ const VIBRATE: Record<Haptic, number | number[]> = {
   warning: [25, 80, 25],
 }
 
-// iOS Safari has no Vibration API, but toggling a native <input switch> (iOS 18+)
-// plays the system haptic tick. Only works inside a user gesture.
-let iosSwitch: HTMLLabelElement | null = null
+// iOS Safari has no Vibration API, but toggling a native <input type=checkbox switch>
+// (Safari 18+) plays the system haptic tick. A fresh, hidden switch is clicked each time,
+// and it only fires inside a user gesture.
 function iosTick() {
-  if (!iosSwitch) {
-    iosSwitch = document.createElement('label')
-    iosSwitch.setAttribute('aria-hidden', 'true')
-    iosSwitch.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden'
-    const input = document.createElement('input')
-    input.type = 'checkbox'
-    input.setAttribute('switch', '')
-    input.tabIndex = -1
-    iosSwitch.append(input)
-    document.body.append(iosSwitch)
-  }
-  iosSwitch.click()
+  const label = document.createElement('label')
+  label.ariaHidden = 'true'
+  label.style.display = 'none'
+  const input = document.createElement('input')
+  input.type = 'checkbox'
+  input.setAttribute('switch', '')
+  label.append(input)
+  document.head.append(label)
+  label.click()
+  label.remove()
 }
 
 export function haptic(kind: Haptic = 'light') {
